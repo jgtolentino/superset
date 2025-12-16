@@ -31,12 +31,14 @@ npx playwright test
 
 ### Critical Production Fix
 ✅ **Resolves SQLite "database is locked" errors** in multi-worker environments
-✅ **Migrates metadata DB from SQLite to PostgreSQL** via `SQLALCHEMY_DATABASE_URI`
+✅ **Configures Superset to use PostgreSQL metadata DB** (not SQLite) via `SUPERSET__SQLALCHEMY_DATABASE_URI`
 ✅ **Credential domain separation** - [SUPERSET_LOGIN] vs [DATA_DB] vs [METADATA_DB]
+
+**Note**: Setting metadata DB URI to Postgres creates a **fresh metadata database**. You must recreate admin users and reconnect data sources. This does NOT migrate existing SQLite metadata - it's a fresh start.
 
 ### Automation Scripts
 - **scripts/bootstrap_examples_db.sh** - Idempotent database + dataset creation
-- **scripts/validate.sh** - Comprehensive health checks (6 validation steps)
+- **scripts/validate.sh** - Comprehensive health checks (7 validation steps including metadata DB engine check)
 - **playwright/smoke.spec.ts** - Headless UI tests with screenshots
 
 ### Production Configuration
@@ -55,9 +57,9 @@ npx playwright test
 3. **Execution-First** - Scripts do the work, not manual console instructions
 4. **Security-Hardened** - No secrets in repo, grep denylist in CI
 
-## Verification Evidence
+## Expected Output
 
-### Bootstrap Script (VERIFIED ✅)
+### Bootstrap Script (Sample)
 ```
 === Superset Examples Bootstrap ===
 ✅ Authenticated successfully
@@ -68,7 +70,7 @@ npx playwright test
 === ✅ Bootstrap Complete ===
 ```
 
-### Validation Suite (VERIFIED ✅)
+### Validation Suite (Sample)
 ```
 ✅ Health check passed (HTTP 200)
 ✅ Authentication successful
@@ -79,6 +81,8 @@ npx playwright test
 ✅ All 3 datasets found
 === ✅ All Validation Checks Passed ===
 ```
+
+**Note**: Run `make validate` in your environment to produce actual verification evidence.
 
 ## Directory Structure
 
@@ -106,7 +110,8 @@ npx playwright test
 - `SUPERSET_ADMIN_USER` - Admin username
 - `SUPERSET_ADMIN_PASS` - Admin password
 - `EXAMPLES_DB_URI` - Data connection (Supabase examples schema)
-- `SQLALCHEMY_DATABASE_URI` - Metadata DB connection (Postgres, NOT SQLite)
+- `SUPERSET__SQLALCHEMY_DATABASE_URI` - Metadata DB connection (Postgres, NOT SQLite)
+  - Alternative: `SQLALCHEMY_DATABASE_URI` (fallback, less widely supported)
 
 ### Optional
 - `REDIS_HOST` - For caching/results backend

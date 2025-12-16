@@ -12,7 +12,7 @@ export BASE_URL="https://superset.insightpulseai.net"
 export SUPERSET_ADMIN_USER="[SUPERSET_LOGIN_USER]"
 export SUPERSET_ADMIN_PASS="[SUPERSET_LOGIN_PASS]"
 export EXAMPLES_DB_URI="[DATA_DB_URI]"
-export SQLALCHEMY_DATABASE_URI="[METADATA_DB_URI]"
+export SUPERSET__SQLALCHEMY_DATABASE_URI="[METADATA_DB_URI]"
 
 # Bootstrap examples database and datasets
 ./scripts/bootstrap_examples_db.sh

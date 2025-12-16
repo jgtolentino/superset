@@ -132,6 +132,37 @@ check_datasets() {
   fi
 }
 
+check_metadata_db() {
+  echo ""
+  echo "🗄️  Checking Superset metadata database engine..."
+
+  # Check if we can determine metadata DB engine via health endpoint or config
+  HEALTH_RESPONSE=$(curl -s "${BASE_URL}/health")
+
+  if echo "$HEALTH_RESPONSE" | grep -qi "sqlite"; then
+    echo "  ❌ CRITICAL: Metadata DB appears to be SQLite"
+    echo "  ⚠️  This WILL cause 'database is locked' errors in production"
+    echo "  Fix: Set SUPERSET__SQLALCHEMY_DATABASE_URI to PostgreSQL connection"
+    return 1
+  fi
+
+  # Alternative check: try to infer from error patterns
+  ACCESS_TOKEN=$(cat "$TEMP_TOKEN_FILE")
+
+  # Get database list - if logs table writes fail, we'll see it
+  DB_LIST=$(curl -s -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+    "${BASE_URL}/api/v1/database/" 2>&1)
+
+  if echo "$DB_LIST" | grep -qi "sqlite3.OperationalError"; then
+    echo "  ❌ CRITICAL: Detected SQLite lock error in metadata DB"
+    echo "  Fix: Set SUPERSET__SQLALCHEMY_DATABASE_URI to PostgreSQL"
+    return 1
+  fi
+
+  echo "  ✅ Metadata DB engine check passed (no SQLite lock errors detected)"
+  return 0
+}
+
 check_sql_execution() {
   echo ""
   echo "🔍 Testing SQL query execution..."
@@ -190,6 +221,7 @@ echo ""
 
 check_health || FAILED=$((FAILED + 1))
 authenticate || FAILED=$((FAILED + 1))
+check_metadata_db || FAILED=$((FAILED + 1))
 check_database || FAILED=$((FAILED + 1))
 check_datasets || FAILED=$((FAILED + 1))
 check_sql_execution || FAILED=$((FAILED + 1))

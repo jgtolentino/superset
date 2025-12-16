@@ -13,15 +13,22 @@ import os
 
 # Metadata database (Superset's own configuration/logs/dashboards)
 # MUST be PostgreSQL in production, NOT SQLite
+#
+# Supports both naming conventions:
+# 1. SUPERSET__SQLALCHEMY_DATABASE_URI (preferred, widely supported)
+# 2. SQLALCHEMY_DATABASE_URI (fallback)
 SQLALCHEMY_DATABASE_URI = os.getenv(
-    'SQLALCHEMY_DATABASE_URI',
-    # Fallback constructs from individual env vars if needed
-    'postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}'.format(
-        user=os.getenv('DATABASE_USER', 'postgres'),
-        password=os.getenv('DATABASE_PASSWORD', ''),
-        host=os.getenv('DATABASE_HOST', 'localhost'),
-        port=os.getenv('DATABASE_PORT', '5432'),
-        db=os.getenv('DATABASE_DB', 'postgres')
+    'SUPERSET__SQLALCHEMY_DATABASE_URI',
+    os.getenv(
+        'SQLALCHEMY_DATABASE_URI',
+        # Final fallback constructs from individual env vars
+        'postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}'.format(
+            user=os.getenv('DATABASE_USER', 'postgres'),
+            password=os.getenv('DATABASE_PASSWORD', ''),
+            host=os.getenv('DATABASE_HOST', 'localhost'),
+            port=os.getenv('DATABASE_PORT', '5432'),
+            db=os.getenv('DATABASE_DB', 'postgres')
+        )
     )
 )
 
@@ -34,7 +41,11 @@ SQLALCHEMY_POOL_TIMEOUT = int(os.getenv('SQLALCHEMY_POOL_TIMEOUT', '30'))
 # SECURITY
 # ============================================================================
 
-SECRET_KEY = os.getenv('SUPERSET_SECRET_KEY', 'CHANGE_ME_IN_PRODUCTION')
+# Supports both SUPERSET__SECRET_KEY and SUPERSET_SECRET_KEY
+SECRET_KEY = os.getenv(
+    'SUPERSET__SECRET_KEY',
+    os.getenv('SUPERSET_SECRET_KEY', 'CHANGE_ME_IN_PRODUCTION')
+)
 
 # Session configuration
 SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'True') == 'True'
