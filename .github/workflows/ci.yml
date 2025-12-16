@@ -1,0 +1,84 @@
+name: Superset CI
+
+on:
+  push:
+    branches: [ main, feature/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Lint shell scripts
+        run: |
+          find scripts -name "*.sh" -type f -exec shellcheck {} +
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Check for secrets
+        run: |
+          # Denylist patterns for common secrets
+          PATTERNS=(
+            "password.*=.*['\"]"
+            "token.*=.*['\"]"
+            "api[_-]key.*=.*['\"]"
+            "secret.*=.*['\"]"
+            "postgresql.*:.*@"
+          )
+
+          FOUND=0
+          for pattern in "${PATTERNS[@]}"; do
+            echo "Checking pattern: $pattern"
+            if grep -rE "$pattern" . --exclude-dir=.git --exclude-dir=artifacts --exclude="*.md"; then
+              echo "❌ Found potential secret matching: $pattern"
+              FOUND=1
+            fi
+          done
+
+          if [ $FOUND -eq 1 ]; then
+            echo "❌ Security check failed: potential secrets found"
+            exit 1
+          fi
+
+          echo "✅ No secrets detected"
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.SUPERSET_ADMIN_USER != '' }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+
+      - name: Run Playwright smoke tests
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          SUPERSET_ADMIN_USER: ${{ secrets.SUPERSET_ADMIN_USER }}
+          SUPERSET_ADMIN_PASS: ${{ secrets.SUPERSET_ADMIN_PASS }}
+        run: npx playwright test playwright/smoke.spec.ts
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-screenshots
+          path: artifacts/
+          retention-days: 7

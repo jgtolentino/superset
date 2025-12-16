@@ -1,0 +1,22 @@
+{
+  "name": "superset-postgres-native",
+  "version": "1.0.0",
+  "description": "Production-grade Superset PostgreSQL-native deployment",
+  "scripts": {
+    "bootstrap": "./scripts/bootstrap_examples_db.sh",
+    "validate": "./scripts/validate.sh",
+    "test:smoke": "playwright test playwright/smoke.spec.ts",
+    "test:smoke:ui": "playwright test playwright/smoke.spec.ts --ui"
+  },
+  "keywords": [
+    "superset",
+    "postgresql",
+    "bi",
+    "analytics"
+  ],
+  "author": "InsightPulse AI",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}
