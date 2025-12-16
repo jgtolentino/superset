@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Get Apache Superset Image Digest
+# Get Apache Superset Image Digest (linux/amd64)
 #
 # Retrieves the SHA256 digest for a specific Superset version tag.
-# Use this digest in DO App Platform spec for reproducible deployments.
+# IMPORTANT: Selects linux/amd64 platform digest for DO App Platform compatibility.
 #
 # Usage: ./scripts/get_image_digest.sh [VERSION]
 #
@@ -14,51 +14,61 @@ set -euo pipefail
 
 VERSION="${1:-4.1.1}"
 IMAGE="apache/superset:$VERSION"
+PLATFORM="linux/amd64"
 
-echo "=== Getting Image Digest ==="
+echo "=== Getting Image Digest (linux/amd64) ==="
 echo "Image: $IMAGE"
+echo "Platform: $PLATFORM"
 echo ""
 
 # ============================================================================
-# METHOD 1: Docker (if available and image is pulled)
+# METHOD 1: Docker buildx imagetools (most reliable for multi-arch)
 # ============================================================================
 
-if command -v docker &>/dev/null; then
-    echo "Method 1: Using Docker..."
+if command -v docker &>/dev/null && docker buildx version &>/dev/null 2>&1; then
+    echo "Method 1: Using docker buildx imagetools..."
 
-    # Pull the image to ensure we have the latest digest
-    echo "   Pulling $IMAGE..."
-    if docker pull "$IMAGE" 2>&1 | tail -3; then
-        DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE" 2>/dev/null || echo "")
+    # Get manifest info and extract linux/amd64 digest
+    INSPECT_OUTPUT=$(docker buildx imagetools inspect "$IMAGE" 2>&1 || true)
 
-        if [[ -n "$DIGEST" ]]; then
+    if [[ -n "$INSPECT_OUTPUT" ]] && [[ "$INSPECT_OUTPUT" != *"error"* ]]; then
+        # Parse the linux/amd64 digest from imagetools output
+        # Format: Platform: linux/amd64 followed by Digest: sha256:...
+        AMD64_DIGEST=$(echo "$INSPECT_OUTPUT" | awk '
+            /Platform:.*linux\/amd64/ { found=1 }
+            found && /Digest:/ { print $2; exit }
+        ')
+
+        if [[ -n "$AMD64_DIGEST" ]]; then
             echo ""
-            echo "✅ Image digest:"
-            echo "   $DIGEST"
+            echo "✅ linux/amd64 digest:"
+            echo "   $AMD64_DIGEST"
             echo ""
             echo "For DO App Platform spec (infra/do/superset-app.yaml):"
             echo ""
             echo "  image:"
             echo "    registry_type: DOCKER_HUB"
-            echo "    repository: apache/superset"
-            # Extract just the sha256:... part
-            SHA=$(echo "$DIGEST" | sed 's/.*@//')
-            echo "    digest: $SHA"
+            echo "    registry: apache"
+            echo "    repository: superset"
+            echo "    digest: $AMD64_DIGEST"
+            echo ""
+            echo "Deploy command:"
+            echo "  doctl apps update \$APP_ID --spec infra/do/superset-app.yaml --update-sources"
             echo ""
             exit 0
         fi
     fi
-    echo "   ⚠️  Docker method failed, trying alternatives..."
+    echo "   ⚠️  Docker buildx method failed, trying alternatives..."
     echo ""
 fi
 
 # ============================================================================
-# METHOD 2: Docker Hub API (no Docker required)
+# METHOD 2: Docker Hub Registry API (no Docker required)
 # ============================================================================
 
-echo "Method 2: Using Docker Hub API..."
+echo "Method 2: Using Docker Hub Registry API..."
 
-# Get token for Docker Hub
+# Get auth token for Docker Hub
 TOKEN=$(curl -sS "https://auth.docker.io/token?service=registry.docker.io&scope=repository:apache/superset:pull" \
     | python3 -c 'import sys,json; print(json.load(sys.stdin).get("token",""))' 2>/dev/null || echo "")
 
@@ -67,35 +77,94 @@ if [[ -z "$TOKEN" ]]; then
     exit 1
 fi
 
-# Get manifest (with digest header)
-MANIFEST_RESP=$(curl -sS -I \
+# Get fat manifest (manifest list) - this contains all platform variants
+FAT_MANIFEST=$(curl -sS \
     -H "Authorization: Bearer $TOKEN" \
-    -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+    -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.index.v1+json" \
     "https://registry-1.docker.io/v2/apache/superset/manifests/$VERSION" 2>&1 || true)
 
-DIGEST=$(echo "$MANIFEST_RESP" | grep -i "docker-content-digest:" | awk '{print $2}' | tr -d '\r')
+# Check if this is a multi-arch manifest list
+if echo "$FAT_MANIFEST" | python3 -c 'import sys,json; d=json.load(sys.stdin); exit(0 if d.get("manifests") else 1)' 2>/dev/null; then
+    echo "   Multi-arch image detected, selecting linux/amd64..."
 
-if [[ -n "$DIGEST" ]]; then
-    echo ""
-    echo "✅ Image digest:"
-    echo "   apache/superset@$DIGEST"
-    echo ""
-    echo "For DO App Platform spec (infra/do/superset-app.yaml):"
-    echo ""
-    echo "  image:"
-    echo "    registry_type: DOCKER_HUB"
-    echo "    repository: apache/superset"
-    echo "    digest: $DIGEST"
-    echo ""
+    # Extract linux/amd64 digest from manifest list
+    AMD64_DIGEST=$(echo "$FAT_MANIFEST" | python3 -c '
+import sys, json
+data = json.load(sys.stdin)
+for m in data.get("manifests", []):
+    p = m.get("platform", {})
+    if p.get("os") == "linux" and p.get("architecture") == "amd64":
+        print(m.get("digest", ""))
+        break
+' 2>/dev/null || echo "")
+
+    if [[ -n "$AMD64_DIGEST" ]]; then
+        echo ""
+        echo "✅ linux/amd64 digest:"
+        echo "   $AMD64_DIGEST"
+        echo ""
+        echo "For DO App Platform spec (infra/do/superset-app.yaml):"
+        echo ""
+        echo "  image:"
+        echo "    registry_type: DOCKER_HUB"
+        echo "    registry: apache"
+        echo "    repository: superset"
+        echo "    digest: $AMD64_DIGEST"
+        echo ""
+        echo "Deploy command:"
+        echo "  doctl apps update \$APP_ID --spec infra/do/superset-app.yaml --update-sources"
+        echo ""
+        exit 0
+    else
+        echo "❌ Could not find linux/amd64 in manifest list" >&2
+        echo "Available platforms:" >&2
+        echo "$FAT_MANIFEST" | python3 -c '
+import sys, json
+data = json.load(sys.stdin)
+for m in data.get("manifests", []):
+    p = m.get("platform", {})
+    print(f"  - {p.get(\"os\")}/{p.get(\"architecture\")}")
+' 2>/dev/null || true
+        exit 1
+    fi
 else
-    echo "❌ Failed to get digest for $IMAGE" >&2
-    echo "Response headers:" >&2
-    echo "$MANIFEST_RESP" | head -20 >&2
-    exit 1
+    # Single-arch image - get digest from header
+    echo "   Single-arch image, getting digest from headers..."
+
+    MANIFEST_RESP=$(curl -sS -I \
+        -H "Authorization: Bearer $TOKEN" \
+        -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+        "https://registry-1.docker.io/v2/apache/superset/manifests/$VERSION" 2>&1 || true)
+
+    DIGEST=$(echo "$MANIFEST_RESP" | grep -i "docker-content-digest:" | awk '{print $2}' | tr -d '\r')
+
+    if [[ -n "$DIGEST" ]]; then
+        echo ""
+        echo "✅ Image digest:"
+        echo "   $DIGEST"
+        echo ""
+        echo "For DO App Platform spec (infra/do/superset-app.yaml):"
+        echo ""
+        echo "  image:"
+        echo "    registry_type: DOCKER_HUB"
+        echo "    registry: apache"
+        echo "    repository: superset"
+        echo "    digest: $DIGEST"
+        echo ""
+        echo "Deploy command:"
+        echo "  doctl apps update \$APP_ID --spec infra/do/superset-app.yaml --update-sources"
+        echo ""
+        exit 0
+    else
+        echo "❌ Failed to get digest for $IMAGE" >&2
+        echo "Response headers:" >&2
+        echo "$MANIFEST_RESP" | head -20 >&2
+        exit 1
+    fi
 fi
 
 # ============================================================================
-# METHOD 3: From running DO deployment
+# METHOD 3: From running DO deployment (reference only)
 # ============================================================================
 
 echo "---"

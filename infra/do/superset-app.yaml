@@ -22,13 +22,19 @@ spec:
       # IMAGE PINNING (REQUIRED) - NO :latest ALLOWED
       # ============================================================
       # Using digest for reproducible, deterministic deployments
-      # This is Superset 4.1.1 pinned by content hash
+      # This is Superset 4.1.1 pinned by linux/amd64 content hash
+      #
+      # IMPORTANT: DO requires registry + repository as separate fields
+      # See: https://docs.digitalocean.com/products/app-platform/reference/app-spec/
       image:
         registry_type: DOCKER_HUB
-        repository: apache/superset
-        digest: sha256:1d1fdaaeb19ce9cdba71620ee1cc6117d73813b2f3b422ce5a1bf752c247b7c0
+        registry: apache
+        repository: superset
+        digest: sha256:75bd685229d55d9709103a5d5994b798ca9d5b314a3b994ef4b9d7f6e198282b
 
-      # To update: ./scripts/get_image_digest.sh <new_version>
+      # To update:
+      #   ./scripts/get_image_digest.sh <new_version>
+      #   doctl apps update $APP_ID --spec infra/do/superset-app.yaml --update-sources
       # ============================================================
 
       instance_count: 1
@@ -107,5 +113,5 @@ spec:
 #
 # | Date       | Version | Digest (first 12 chars) | Notes          |
 # |------------|---------|-------------------------|----------------|
-# | 2025-12-16 | 4.1.1   | sha256:1d1fdaae...      | Initial pin    |
+# | 2025-12-16 | 4.1.1   | sha256:75bd6852...      | linux/amd64    |
 # ============================================================

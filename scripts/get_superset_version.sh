@@ -37,7 +37,8 @@ echo ""
 # ============================================================================
 
 echo "Step 1: Trying unauthenticated /api/v1/version..."
-UNAUTH_RESPONSE=$(curl -sS -w "\n%{http_code}" "$BASE_URL/api/v1/version" 2>&1 || true)
+# Use -L to follow redirects (e.g., / -> /superset/welcome/)
+UNAUTH_RESPONSE=$(curl -sSL -w "\n%{http_code}" "$BASE_URL/api/v1/version" 2>&1 || true)
 HTTP_CODE=$(echo "$UNAUTH_RESPONSE" | tail -1)
 BODY=$(echo "$UNAUTH_RESPONSE" | head -n -1)
 
@@ -65,8 +66,8 @@ if [[ -z "${SUPERSET_ADMIN_USER:-}" ]] || [[ -z "${SUPERSET_ADMIN_PASS:-}" ]]; t
     exit 2
 fi
 
-# Get access token
-LOGIN_RESPONSE=$(curl -sS "$BASE_URL/api/v1/security/login" \
+# Get access token (use -L to follow any redirects)
+LOGIN_RESPONSE=$(curl -sSL "$BASE_URL/api/v1/security/login" \
     -H "Content-Type: application/json" \
     -d "{\"username\":\"$SUPERSET_ADMIN_USER\",\"password\":\"$SUPERSET_ADMIN_PASS\",\"provider\":\"db\"}" 2>&1)
 
@@ -87,7 +88,7 @@ echo ""
 
 echo "Step 3: Getting version (authenticated)..."
 
-VERSION_RESPONSE=$(curl -sS -w "\n%{http_code}" \
+VERSION_RESPONSE=$(curl -sSL -w "\n%{http_code}" \
     -H "Authorization: Bearer $ACCESS_TOKEN" \
     "$BASE_URL/api/v1/version" 2>&1)
 
@@ -112,7 +113,7 @@ else
     echo "Step 4: Trying alternative info endpoints..."
 
     for endpoint in "/api/v1/me" "/api/v1/database/" "/health"; do
-        RESP=$(curl -sS -o /dev/null -w "%{http_code}" \
+        RESP=$(curl -sSL -o /dev/null -w "%{http_code}" \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             "$BASE_URL$endpoint" 2>&1 || echo "000")
         echo "   $endpoint -> HTTP $RESP"
