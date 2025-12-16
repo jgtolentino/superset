@@ -6,24 +6,11 @@ set -euo pipefail
 # IDEMPOTENT: Safe to run multiple times
 
 # ============================================================================
-# ENVIRONMENT VALIDATION
+# PREFLIGHT CHECK
 # ============================================================================
 
-if [ -z "${EXAMPLES_DB_URI:-}" ]; then
-  echo "❌ Error: EXAMPLES_DB_URI environment variable not set"
-  echo "Format: postgresql+psycopg2://USER:PASS@HOST:PORT/DB?options=-csearch_path%3Dexamples"
-  exit 1
-fi
-
-if [ -z "${SUPERSET_ADMIN_USER:-}" ]; then
-  echo "❌ Error: SUPERSET_ADMIN_USER environment variable not set"
-  exit 1
-fi
-
-if [ -z "${SUPERSET_ADMIN_PASS:-}" ]; then
-  echo "❌ Error: SUPERSET_ADMIN_PASS environment variable not set"
-  exit 1
-fi
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$SCRIPT_DIR/require_env.sh"
 
 BASE_URL="${BASE_URL:-http://localhost:8088}"
 

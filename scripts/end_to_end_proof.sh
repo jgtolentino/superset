@@ -6,17 +6,17 @@ set -euo pipefail
 # Usage: ./scripts/end_to_end_proof.sh
 
 # ============================================================================
+# PREFLIGHT CHECK
+# ============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$SCRIPT_DIR/require_env.sh"
+
+# ============================================================================
 # CONFIGURATION
 # ============================================================================
 
 BASE_URL="${BASE_URL:-https://superset.insightpulseai.net}"
-SUPERSET_ADMIN_USER="${SUPERSET_ADMIN_USER:-}"
-SUPERSET_ADMIN_PASS="${SUPERSET_ADMIN_PASS:-}"
-
-if [ -z "$SUPERSET_ADMIN_USER" ] || [ -z "$SUPERSET_ADMIN_PASS" ]; then
-  echo "❌ Error: SUPERSET_ADMIN_USER and SUPERSET_ADMIN_PASS required"
-  exit 1
-fi
 
 TEMP_TOKEN_FILE=$(mktemp)
 trap "rm -f $TEMP_TOKEN_FILE" EXIT
