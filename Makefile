@@ -41,6 +41,10 @@ end-to-end: ## Run end-to-end proof suite (datasets API + SQL + UI)
 	@echo "=== Running End-to-End Proof Suite ==="
 	@./scripts/end_to_end_proof.sh
 
+load-samples: ## Load official Superset sample dashboards into production
+	@echo "=== Loading Official Superset Samples ==="
+	@./scripts/load_official_samples.sh
+
 clean: ## Clean up artifacts directory
 	@echo "=== Cleaning artifacts ==="
 	@rm -rf artifacts/*.png
