@@ -1,0 +1,111 @@
+# DigitalOcean App Platform Specification for Superset
+#
+# CRITICAL: Image pinning - NEVER use 'tag: latest'
+# Use either:
+#   - Semver tag: apache/superset:4.1.1
+#   - Digest (preferred): apache/superset@sha256:<digest>
+#
+# To get current digest from running deployment:
+#   doctl apps get $APP_ID --output json | jq '.spec.services[].image'
+#
+# To get latest stable digest:
+#   docker pull apache/superset:4.1.1
+#   docker inspect --format='{{index .RepoDigests 0}}' apache/superset:4.1.1
+
+spec:
+  name: superset-analytics
+  region: nyc
+
+  services:
+    - name: superset
+      # ============================================================
+      # IMAGE PINNING (REQUIRED) - NO :latest ALLOWED
+      # ============================================================
+      # Using digest for reproducible, deterministic deployments
+      # This is Superset 4.1.1 pinned by content hash
+      image:
+        registry_type: DOCKER_HUB
+        repository: apache/superset
+        digest: sha256:1d1fdaaeb19ce9cdba71620ee1cc6117d73813b2f3b422ce5a1bf752c247b7c0
+
+      # To update: ./scripts/get_image_digest.sh <new_version>
+      # ============================================================
+
+      instance_count: 1
+      instance_size_slug: professional-xs
+
+      http_port: 8088
+
+      health_check:
+        http_path: /health
+        initial_delay_seconds: 60
+        period_seconds: 30
+        timeout_seconds: 10
+        success_threshold: 1
+        failure_threshold: 3
+
+      run_command: |
+        superset db upgrade && \
+        superset init && \
+        gunicorn \
+          --bind 0.0.0.0:8088 \
+          --workers 4 \
+          --timeout 120 \
+          --limit-request-line 0 \
+          --limit-request-field_size 0 \
+          "superset.app:create_app()"
+
+      envs:
+        # Database (PostgreSQL metadata - NOT SQLite)
+        - key: SUPERSET__SQLALCHEMY_DATABASE_URI
+          scope: RUN_TIME
+          type: SECRET
+          # Set via doctl or DO console
+
+        # Security
+        - key: SUPERSET__SECRET_KEY
+          scope: RUN_TIME
+          type: SECRET
+
+        # Admin credentials
+        - key: SUPERSET_ADMIN_USER
+          scope: RUN_TIME
+          type: SECRET
+
+        - key: SUPERSET_ADMIN_PASS
+          scope: RUN_TIME
+          type: SECRET
+
+        # Examples database connection
+        - key: EXAMPLES_DB_URI
+          scope: RUN_TIME
+          type: SECRET
+
+        # Performance
+        - key: SUPERSET_WEBSERVER_TIMEOUT
+          scope: RUN_TIME
+          value: "300"
+
+        # Logging
+        - key: LOG_LEVEL
+          scope: RUN_TIME
+          value: INFO
+
+  # Database (PostgreSQL for metadata)
+  databases:
+    - name: superset-metadata
+      engine: PG
+      production: true
+      cluster_name: superset-postgres
+      db_name: superset
+      db_user: superset
+
+# ============================================================
+# VERSION HISTORY (for rollback reference)
+# ============================================================
+# Update this section when changing image versions
+#
+# | Date       | Version | Digest (first 12 chars) | Notes          |
+# |------------|---------|-------------------------|----------------|
+# | 2025-12-16 | 4.1.1   | sha256:1d1fdaae...      | Initial pin    |
+# ============================================================
