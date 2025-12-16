@@ -23,7 +23,7 @@ for v in "${REQ[@]}"; do
     echo "  - SUPERSET_ADMIN_PASS" >&2
     echo "  - EXAMPLES_DB_URI" >&2
     echo "" >&2
-    echo "Set these in ~/.zshrc or export before running script" >&2
+    echo "Set these in .env (gitignored) or export before running script" >&2
     exit 2
   fi
 done
@@ -48,7 +48,7 @@ for sus in "${SUSPICIOUS_PASSWORDS[@]}"; do
     echo "❌ BLOCKED: obvious placeholder in SUPERSET_ADMIN_PASS: '$val'" >&2
     echo "" >&2
     echo "This is a documentation placeholder, not a real credential." >&2
-    echo "Set actual production credentials in ~/.zshrc" >&2
+    echo "Set actual production credentials in .env (gitignored) or export" >&2
     exit 3
   fi
 done
