@@ -10,7 +10,7 @@ SUPERSET_ADMIN_USER ?=
 SUPERSET_ADMIN_PASS ?=
 EXAMPLES_DB_URI ?=
 
-.PHONY: help bootstrap validate ui-smoke end-to-end clean
+.PHONY: help bootstrap validate ui-smoke end-to-end clean version digest
 
 help: ## Show this help message
 	@echo "Superset PostgreSQL-Native Production - Available Targets:"
@@ -49,3 +49,11 @@ clean: ## Clean up artifacts directory
 	@echo "=== Cleaning artifacts ==="
 	@rm -rf artifacts/*.png
 	@echo "✅ Artifacts cleaned"
+
+version: ## Get running Superset version (authenticated API)
+	@echo "=== Getting Superset Version ==="
+	@./scripts/get_superset_version.sh
+
+digest: ## Get image digest for pinning (default: 4.1.1)
+	@echo "=== Getting Image Digest ==="
+	@./scripts/get_image_digest.sh $(or $(TAG),4.1.1)

@@ -19,8 +19,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_ID="73af11cb-dab2-4cb1-9770-291c536531e6"  # superset-analytics
 COMPONENT_NAME="superset"  # Default component name for DO apps
 
+# Image version (must match infra/do/superset-app.yaml)
+# Use digest for reproducibility: apache/superset@sha256:1d1fdaae...
+# Update with: ./scripts/get_image_digest.sh <version>
+SUPERSET_VERSION="4.1.1"
+
 echo "=== Loading Official Superset Sample Dashboards ==="
 echo "App ID: $APP_ID"
+echo "Superset Version: $SUPERSET_VERSION"
 echo "Production URL: $BASE_URL"
 echo ""
 
