@@ -1,0 +1,161 @@
+name: Spec Kit Guard
+
+on:
+  push:
+    paths:
+      - 'spec/**'
+      - 'skills/**'
+      - '.github/workflows/spec-kit-guard.yml'
+  pull_request:
+    paths:
+      - 'spec/**'
+      - 'skills/**'
+
+jobs:
+  validate-specs:
+    name: Validate Spec Kit Structure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check spec kit files
+        run: |
+          echo "=== Checking Spec Kit Structure ==="
+
+          ERRORS=0
+
+          # Find all spec directories
+          for spec_dir in spec/*/; do
+            if [ -d "$spec_dir" ]; then
+              echo ""
+              echo "Checking: $spec_dir"
+
+              # Required files for each spec kit
+              REQUIRED_FILES=(
+                "constitution.md"
+                "prd.md"
+                "plan.md"
+                "tasks.md"
+              )
+
+              for file in "${REQUIRED_FILES[@]}"; do
+                if [ -f "${spec_dir}${file}" ]; then
+                  echo "  ✅ ${file}"
+                else
+                  echo "  ❌ ${file} MISSING"
+                  ERRORS=$((ERRORS + 1))
+                fi
+              done
+            fi
+          done
+
+          echo ""
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ Found $ERRORS missing spec files"
+            exit 1
+          else
+            echo "✅ All spec kits have required files"
+          fi
+
+      - name: Check script executability
+        run: |
+          echo "=== Checking Script Executability ==="
+
+          ERRORS=0
+
+          # Check docker-image-build scripts
+          if [ -d "skills/docker-image-build/scripts" ]; then
+            echo ""
+            echo "Checking: skills/docker-image-build/scripts/"
+
+            for script in skills/docker-image-build/scripts/*.sh; do
+              if [ -f "$script" ]; then
+                if [ -x "$script" ]; then
+                  echo "  ✅ $(basename $script) is executable"
+                else
+                  echo "  ❌ $(basename $script) NOT executable"
+                  ERRORS=$((ERRORS + 1))
+                fi
+              fi
+            done
+          fi
+
+          echo ""
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ Found $ERRORS non-executable scripts"
+            echo ""
+            echo "Fix with: chmod +x skills/docker-image-build/scripts/*.sh"
+            exit 1
+          else
+            echo "✅ All scripts are executable"
+          fi
+
+      - name: Validate shell scripts
+        run: |
+          echo "=== Validating Shell Scripts ==="
+
+          ERRORS=0
+
+          for script in skills/docker-image-build/scripts/*.sh; do
+            if [ -f "$script" ]; then
+              echo -n "Checking: $(basename $script) ... "
+              if bash -n "$script" 2>/dev/null; then
+                echo "✅ valid"
+              else
+                echo "❌ syntax error"
+                bash -n "$script"
+                ERRORS=$((ERRORS + 1))
+              fi
+            fi
+          done
+
+          echo ""
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ Found $ERRORS scripts with syntax errors"
+            exit 1
+          else
+            echo "✅ All scripts have valid syntax"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Spec Kit Guard Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Spec kits
+          echo "### Spec Kits" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for spec_dir in spec/*/; do
+            if [ -d "$spec_dir" ]; then
+              spec_name=$(basename "$spec_dir")
+              echo "- \`$spec_name\`" >> $GITHUB_STEP_SUMMARY
+              for file in constitution.md prd.md plan.md tasks.md; do
+                if [ -f "${spec_dir}${file}" ]; then
+                  echo "  - ✅ ${file}" >> $GITHUB_STEP_SUMMARY
+                else
+                  echo "  - ❌ ${file} (missing)" >> $GITHUB_STEP_SUMMARY
+                fi
+              done
+            fi
+          done
+
+          # Skills
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Skills" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for skill_dir in skills/*/; do
+            if [ -d "$skill_dir" ]; then
+              skill_name=$(basename "$skill_dir")
+              echo "- \`$skill_name\`" >> $GITHUB_STEP_SUMMARY
+              if [ -f "${skill_dir}README.md" ]; then
+                echo "  - ✅ README.md" >> $GITHUB_STEP_SUMMARY
+              fi
+              if [ -d "${skill_dir}scripts" ]; then
+                script_count=$(ls -1 "${skill_dir}scripts/"*.sh 2>/dev/null | wc -l)
+                echo "  - 📜 ${script_count} scripts" >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
+          done
