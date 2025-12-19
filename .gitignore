@@ -2,3 +2,6 @@ artifacts/
 
 # db-inventory outputs
 tools/db-inventory/output/
+
+# Security scan outputs
+tools/security/output/
