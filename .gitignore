@@ -42,3 +42,6 @@ node_modules/
 # Playwright
 test-results/
 playwright/.cache/
+
+# db-inventory outputs
+tools/db-inventory/output/
