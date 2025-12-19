@@ -10,7 +10,8 @@ SUPERSET_ADMIN_USER ?=
 SUPERSET_ADMIN_PASS ?=
 EXAMPLES_DB_URI ?=
 
-.PHONY: help bootstrap validate ui-smoke end-to-end clean version digest
+.PHONY: help bootstrap validate ui-smoke end-to-end clean version digest \
+        image-build image-scan image-push image-verify release-image
 
 help: ## Show this help message
 	@echo "Superset PostgreSQL-Native Production - Available Targets:"
@@ -57,3 +58,39 @@ version: ## Get running Superset version (authenticated API)
 digest: ## Get image digest for pinning (default: 4.1.1)
 	@echo "=== Getting Image Digest ==="
 	@./scripts/get_image_digest.sh $(or $(TAG),4.1.1)
+
+# =============================================================================
+# Docker Image Build Targets
+# =============================================================================
+
+# Image configuration
+IMAGE_REPO ?= ghcr.io/jgtolentino/ipai-superset
+IMAGE_TAG ?= latest
+PLATFORMS ?= linux/amd64,linux/arm64
+
+image-build: ## Build multi-arch Docker image
+	@echo "=== Building Docker Image ==="
+	@IMAGE_REPO=$(IMAGE_REPO) IMAGE_TAG=$(IMAGE_TAG) PLATFORMS=$(PLATFORMS) \
+		./skills/docker-image-build/scripts/build.sh $(ARGS)
+
+image-scan: ## Scan Docker image for vulnerabilities
+	@echo "=== Scanning Docker Image ==="
+	@IMAGE_REPO=$(IMAGE_REPO) IMAGE_TAG=$(IMAGE_TAG) \
+		./skills/docker-image-build/scripts/scan.sh $(ARGS)
+
+image-push: ## Push Docker image to registry
+	@echo "=== Pushing Docker Image ==="
+	@IMAGE_REPO=$(IMAGE_REPO) IMAGE_TAG=$(IMAGE_TAG) \
+		./skills/docker-image-build/scripts/push.sh $(ARGS)
+
+image-verify: ## Verify Docker image
+	@echo "=== Verifying Docker Image ==="
+	@IMAGE_REPO=$(IMAGE_REPO) IMAGE_TAG=$(IMAGE_TAG) \
+		./skills/docker-image-build/scripts/verify.sh $(ARGS)
+
+release-image: ## Full release: build + scan + push + verify
+	@echo "=== Full Image Release ==="
+	@$(MAKE) image-build ARGS="--push"
+	@$(MAKE) image-scan
+	@$(MAKE) image-verify
+	@echo "=== Release Complete ==="
