@@ -1,0 +1,117 @@
+name: Spec Kit Enforcement
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+    paths:
+      - 'spec/**'
+      - '.claude/**'
+      - 'CLAUDE.md'
+
+jobs:
+  spec-kit:
+    name: Validate Spec Kits
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Spec Kit bundle exists
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Require spec/ directory
+          if [ ! -d "spec" ]; then
+            echo "::error::Missing spec/ directory"
+            exit 1
+          fi
+
+          # Find directories under spec/ that contain constitution.md
+          bundles=$(find spec -mindepth 2 -maxdepth 2 -type f -name constitution.md -print | wc -l | tr -d ' ')
+          if [ "$bundles" -lt 1 ]; then
+            echo "::error::No Spec Kit bundle found. Expected spec/<slug>/constitution.md"
+            exit 1
+          fi
+
+          echo "Found $bundles spec kit bundle(s)"
+
+      - name: Validate required files and content quality
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          fail=0
+
+          # For every spec/<slug>/constitution.md, enforce the full 4-file kit
+          while IFS= read -r cfile; do
+            slug_dir="$(dirname "$cfile")"
+            slug_name="$(basename "$slug_dir")"
+            echo "::group::Validating spec kit: $slug_name"
+
+            for f in constitution.md prd.md plan.md tasks.md; do
+              path="$slug_dir/$f"
+
+              # Check file exists
+              if [ ! -f "$path" ]; then
+                echo "::error file=$path::Missing required Spec Kit file: $path"
+                fail=1
+                continue
+              fi
+
+              # Check non-trivial content (at least 10 non-empty, non-heading lines)
+              non_empty="$(grep -Ev '^\s*$' "$path" | grep -Ev '^#' | wc -l | tr -d ' ')"
+              if [ "$non_empty" -lt 10 ]; then
+                echo "::error file=$path::Spec file too small (<10 content lines). Add real content."
+                fail=1
+              fi
+
+              # Block placeholder text patterns
+              if grep -Eqi '(TODO|TBD|PLACEHOLDER|FILL\s*ME\s*IN|LOREM\s*IPSUM)' "$path"; then
+                echo "::error file=$path::Spec contains placeholders (TODO/TBD/etc). Remove placeholders before merging."
+                fail=1
+              fi
+
+              echo "OK: $path"
+            done
+
+            echo "::endgroup::"
+          done < <(find spec -mindepth 2 -maxdepth 2 -type f -name constitution.md -print)
+
+          if [ "$fail" -ne 0 ]; then
+            echo ""
+            echo "::error::Spec Kit validation failed. Fix the issues above."
+            exit 1
+          fi
+
+          echo ""
+          echo "All spec kits validated successfully!"
+
+      - name: Validate CLAUDE.md exists
+        shell: bash
+        run: |
+          if [ ! -f "CLAUDE.md" ]; then
+            echo "::error::Missing CLAUDE.md at repo root"
+            exit 1
+          fi
+          echo "OK: CLAUDE.md exists"
+
+      - name: Validate agent configuration
+        shell: bash
+        run: |
+          fail=0
+
+          if [ ! -f ".claude/settings.json" ]; then
+            echo "::warning::Missing .claude/settings.json (agent allowlist)"
+          fi
+
+          if [ ! -d ".claude/commands" ]; then
+            echo "::warning::Missing .claude/commands/ (agent commands)"
+          else
+            cmd_count=$(find .claude/commands -name "*.md" | wc -l | tr -d ' ')
+            echo "Found $cmd_count agent command(s)"
+          fi
+
+          echo "Agent configuration check complete"

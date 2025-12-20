@@ -1,0 +1,21 @@
+{
+  "allowedTools": [
+    "Edit",
+    "Bash(git status)",
+    "Bash(git diff*)",
+    "Bash(git add*)",
+    "Bash(git commit*)",
+    "Bash(git push*)",
+    "Bash(./scripts/require_env.sh)",
+    "Bash(./scripts/repo_health.sh)",
+    "Bash(./scripts/verify.sh)",
+    "Bash(./scripts/spec_validate.sh)",
+    "Bash(make *)",
+    "Bash(npm run lint*)",
+    "Bash(npm run typecheck*)",
+    "Bash(npm run test*)",
+    "Bash(pnpm -s lint)",
+    "Bash(pnpm -s typecheck)",
+    "Bash(pnpm -s test)"
+  ]
+}

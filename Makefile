@@ -11,7 +11,8 @@ SUPERSET_ADMIN_PASS ?=
 EXAMPLES_DB_URI ?=
 
 .PHONY: help bootstrap validate ui-smoke end-to-end clean version digest \
-        image-build image-scan image-push image-verify release-image
+        image-build image-scan image-push image-verify release-image \
+        spec-validate agent-verify
 
 help: ## Show this help message
 	@echo "Superset PostgreSQL-Native Production - Available Targets:"
@@ -94,3 +95,17 @@ release-image: ## Full release: build + scan + push + verify
 	@$(MAKE) image-scan
 	@$(MAKE) image-verify
 	@echo "=== Release Complete ==="
+
+# =============================================================================
+# Agent and Spec Kit Targets
+# =============================================================================
+
+spec-validate: ## Validate all spec kits (constitution/prd/plan/tasks)
+	@echo "=== Validating Spec Kits ==="
+	@./scripts/spec_validate.sh
+
+agent-verify: ## Run full agent verification (spec + repo health)
+	@echo "=== Agent Verification ==="
+	@./scripts/spec_validate.sh
+	@echo ""
+	@echo "Agent verification complete. Use /project:verify for full checks."
