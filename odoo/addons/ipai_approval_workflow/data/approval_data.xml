@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Sequence for approval requests -->
+        <record id="seq_approval_request" model="ir.sequence">
+            <field name="name">Approval Request</field>
+            <field name="code">ipai.approval.request</field>
+            <field name="prefix">APR-</field>
+            <field name="padding">5</field>
+        </record>
+
+        <!-- Cron job for escalation -->
+        <record id="ir_cron_approval_escalation" model="ir.cron">
+            <field name="name">Approval: Check Escalations</field>
+            <field name="model_id" ref="model_ipai_approval_request"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_check_escalations()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">hours</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+        </record>
+
+        <!-- Default Approval Rules -->
+
+        <!-- Month-End Close Approval Rule -->
+        <record id="approval_rule_month_end" model="ipai.approval.rule">
+            <field name="name">Month-End Close Approval</field>
+            <field name="description">Standard approval flow for month-end close tasks</field>
+            <field name="rule_type">month_end</field>
+            <field name="approval_timeout_hours">24</field>
+        </record>
+
+        <record id="approval_stage_month_end_reviewer" model="ipai.approval.stage">
+            <field name="name">Reviewer</field>
+            <field name="rule_id" ref="approval_rule_month_end"/>
+            <field name="sequence">10</field>
+            <field name="raci_role">responsible</field>
+            <field name="approval_mode">any</field>
+        </record>
+
+        <record id="approval_stage_month_end_manager" model="ipai.approval.stage">
+            <field name="name">Finance Manager</field>
+            <field name="rule_id" ref="approval_rule_month_end"/>
+            <field name="sequence">20</field>
+            <field name="raci_role">accountable</field>
+            <field name="approval_mode">any</field>
+        </record>
+
+        <!-- BIR Filing Approval Rule -->
+        <record id="approval_rule_bir_filing" model="ipai.approval.rule">
+            <field name="name">BIR Filing Approval</field>
+            <field name="description">Approval flow for BIR tax filings</field>
+            <field name="rule_type">bir_filing</field>
+            <field name="approval_timeout_hours">48</field>
+        </record>
+
+        <record id="approval_stage_bir_preparer" model="ipai.approval.stage">
+            <field name="name">Tax Preparer Review</field>
+            <field name="rule_id" ref="approval_rule_bir_filing"/>
+            <field name="sequence">10</field>
+            <field name="raci_role">responsible</field>
+            <field name="approval_mode">any</field>
+        </record>
+
+        <record id="approval_stage_bir_reviewer" model="ipai.approval.stage">
+            <field name="name">Tax Reviewer</field>
+            <field name="rule_id" ref="approval_rule_bir_filing"/>
+            <field name="sequence">20</field>
+            <field name="raci_role">consulted</field>
+            <field name="approval_mode">any</field>
+        </record>
+
+        <record id="approval_stage_bir_approver" model="ipai.approval.stage">
+            <field name="name">Final Approval</field>
+            <field name="rule_id" ref="approval_rule_bir_filing"/>
+            <field name="sequence">30</field>
+            <field name="raci_role">accountable</field>
+            <field name="approval_mode">any</field>
+        </record>
+
+        <!-- Payment Batch Approval Rule -->
+        <record id="approval_rule_payment" model="ipai.approval.rule">
+            <field name="name">Payment Batch Approval</field>
+            <field name="description">Approval flow for payment batches</field>
+            <field name="rule_type">payment</field>
+            <field name="approval_timeout_hours">8</field>
+        </record>
+
+        <record id="approval_stage_payment_reviewer" model="ipai.approval.stage">
+            <field name="name">AP Review</field>
+            <field name="rule_id" ref="approval_rule_payment"/>
+            <field name="sequence">10</field>
+            <field name="raci_role">responsible</field>
+            <field name="approval_mode">any</field>
+        </record>
+
+        <record id="approval_stage_payment_approver" model="ipai.approval.stage">
+            <field name="name">Treasury Approval</field>
+            <field name="rule_id" ref="approval_rule_payment"/>
+            <field name="sequence">20</field>
+            <field name="raci_role">accountable</field>
+            <field name="approval_mode">any</field>
+        </record>
+    </data>
+</odoo>

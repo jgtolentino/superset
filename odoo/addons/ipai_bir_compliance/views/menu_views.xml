@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Root Menu -->
+    <menuitem id="menu_bir_root"
+              name="BIR Compliance"
+              web_icon="ipai_bir_compliance,static/description/icon.png"
+              sequence="50"/>
+
+    <!-- Main Menus -->
+    <menuitem id="menu_bir_filings"
+              name="Filings"
+              parent="menu_bir_root"
+              action="action_bir_filing"
+              sequence="10"/>
+
+    <menuitem id="menu_bir_filings_pending"
+              name="Pending Filings"
+              parent="menu_bir_root"
+              action="action_bir_filing_pending"
+              sequence="20"/>
+
+    <!-- Configuration Menu -->
+    <menuitem id="menu_bir_config"
+              name="Configuration"
+              parent="menu_bir_root"
+              sequence="100"
+              groups="ipai_bir_compliance.group_bir_manager"/>
+
+    <menuitem id="menu_bir_forms"
+              name="BIR Form Types"
+              parent="menu_bir_config"
+              action="action_bir_form"
+              sequence="10"/>
+
+    <menuitem id="menu_bir_schedules"
+              name="Filing Schedules"
+              parent="menu_bir_config"
+              action="action_bir_schedule"
+              sequence="20"/>
+</odoo>

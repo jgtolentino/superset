@@ -1,0 +1,339 @@
+{
+  "name": "Month-End Task Notifications",
+  "nodes": [
+    {
+      "id": "webhook_task_update",
+      "name": "Task Update Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [100, 300],
+      "parameters": {
+        "path": "task-update",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "responseCode": 200
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "parse_event",
+      "name": "Parse Task Event",
+      "type": "n8n-nodes-base.set",
+      "position": [300, 300],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "event_type",
+              "value": "={{ $json.body.event_type }}"
+            },
+            {
+              "name": "task_name",
+              "value": "={{ $json.body.task_name }}"
+            },
+            {
+              "name": "task_id",
+              "value": "={{ $json.body.task_id }}"
+            },
+            {
+              "name": "period_name",
+              "value": "={{ $json.body.period_name }}"
+            },
+            {
+              "name": "responsible_email",
+              "value": "={{ $json.body.responsible_email }}"
+            },
+            {
+              "name": "accountable_email",
+              "value": "={{ $json.body.accountable_email }}"
+            },
+            {
+              "name": "deadline",
+              "value": "={{ $json.body.deadline }}"
+            },
+            {
+              "name": "new_state",
+              "value": "={{ $json.body.new_state }}"
+            }
+          ]
+        }
+      },
+      "typeVersion": 3
+    },
+    {
+      "id": "route_by_event",
+      "name": "Route by Event Type",
+      "type": "n8n-nodes-base.switch",
+      "position": [500, 300],
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.event_type }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "task_assigned"
+            },
+            {
+              "value2": "task_due_soon"
+            },
+            {
+              "value2": "task_overdue"
+            },
+            {
+              "value2": "task_needs_review"
+            },
+            {
+              "value2": "task_completed"
+            },
+            {
+              "value2": "task_rejected"
+            }
+          ]
+        }
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "email_task_assigned",
+      "name": "Email: Task Assigned",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [750, 100],
+      "parameters": {
+        "fromEmail": "monthend@tbwa.ph",
+        "toEmail": "={{ $json.responsible_email }}",
+        "subject": "[Month-End] New Task Assigned: {{ $json.task_name }}",
+        "text": "Hello,\n\nA new month-end task has been assigned to you:\n\nTask: {{ $json.task_name }}\nPeriod: {{ $json.period_name }}\nDeadline: {{ $json.deadline }}\n\nPlease log in to Odoo to view the task details and begin working on it.\n\nBest regards,\nMonth-End Close System",
+        "options": {}
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "email_due_soon",
+      "name": "Email: Task Due Soon",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [750, 200],
+      "parameters": {
+        "fromEmail": "monthend@tbwa.ph",
+        "toEmail": "={{ $json.responsible_email }}",
+        "subject": "⏰ [Month-End] Task Due Soon: {{ $json.task_name }}",
+        "text": "Hello,\n\nThis is a reminder that the following task is due soon:\n\nTask: {{ $json.task_name }}\nPeriod: {{ $json.period_name }}\nDeadline: {{ $json.deadline }}\n\nPlease ensure the task is completed before the deadline.\n\nBest regards,\nMonth-End Close System",
+        "options": {}
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "email_overdue",
+      "name": "Email: Task Overdue",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [750, 300],
+      "parameters": {
+        "fromEmail": "monthend@tbwa.ph",
+        "toEmail": "={{ $json.responsible_email }},{{ $json.accountable_email }}",
+        "subject": "🚨 [Month-End] OVERDUE Task: {{ $json.task_name }}",
+        "text": "ATTENTION,\n\nThe following task is now OVERDUE:\n\nTask: {{ $json.task_name }}\nPeriod: {{ $json.period_name }}\nDeadline: {{ $json.deadline }}\n\nImmediate action is required. Please complete this task as soon as possible or contact your manager.\n\nBest regards,\nMonth-End Close System",
+        "options": {}
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "email_needs_review",
+      "name": "Email: Task Needs Review",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [750, 400],
+      "parameters": {
+        "fromEmail": "monthend@tbwa.ph",
+        "toEmail": "={{ $json.accountable_email }}",
+        "subject": "👀 [Month-End] Review Required: {{ $json.task_name }}",
+        "text": "Hello,\n\nThe following task requires your review and approval:\n\nTask: {{ $json.task_name }}\nPeriod: {{ $json.period_name }}\nSubmitted by: {{ $json.responsible_email }}\n\nPlease log in to Odoo to review and approve or reject the task.\n\nBest regards,\nMonth-End Close System",
+        "options": {}
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "email_completed",
+      "name": "Email: Task Completed",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [750, 500],
+      "parameters": {
+        "fromEmail": "monthend@tbwa.ph",
+        "toEmail": "={{ $json.responsible_email }}",
+        "ccEmail": "={{ $json.accountable_email }}",
+        "subject": "✅ [Month-End] Task Completed: {{ $json.task_name }}",
+        "text": "Hello,\n\nThe following task has been approved and completed:\n\nTask: {{ $json.task_name }}\nPeriod: {{ $json.period_name }}\n\nThank you for your contribution to the month-end close process.\n\nBest regards,\nMonth-End Close System",
+        "options": {}
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "email_rejected",
+      "name": "Email: Task Rejected",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [750, 600],
+      "parameters": {
+        "fromEmail": "monthend@tbwa.ph",
+        "toEmail": "={{ $json.responsible_email }}",
+        "subject": "❌ [Month-End] Task Requires Rework: {{ $json.task_name }}",
+        "text": "Hello,\n\nThe following task has been rejected and requires rework:\n\nTask: {{ $json.task_name }}\nPeriod: {{ $json.period_name }}\n\nPlease log in to Odoo to view the reviewer's comments and make the necessary corrections.\n\nBest regards,\nMonth-End Close System",
+        "options": {}
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "slack_notification",
+      "name": "Slack Channel Update",
+      "type": "n8n-nodes-base.slack",
+      "position": [950, 350],
+      "parameters": {
+        "channel": "#finance-month-end",
+        "text": "📋 *Task Update*\n\n*Task:* {{ $json.task_name }}\n*Period:* {{ $json.period_name }}\n*Status:* {{ $json.new_state }}\n*Event:* {{ $json.event_type }}",
+        "otherOptions": {
+          "mrkdwn": true
+        }
+      },
+      "typeVersion": 2
+    }
+  ],
+  "connections": {
+    "webhook_task_update": {
+      "main": [
+        [
+          {
+            "node": "parse_event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parse_event": {
+      "main": [
+        [
+          {
+            "node": "route_by_event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "route_by_event": {
+      "main": [
+        [
+          {
+            "node": "email_task_assigned",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "email_due_soon",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "email_overdue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "email_needs_review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "email_completed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "email_rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "email_task_assigned": {
+      "main": [
+        [
+          {
+            "node": "slack_notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "email_due_soon": {
+      "main": [
+        [
+          {
+            "node": "slack_notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "email_overdue": {
+      "main": [
+        [
+          {
+            "node": "slack_notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "email_needs_review": {
+      "main": [
+        [
+          {
+            "node": "slack_notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "email_completed": {
+      "main": [
+        [
+          {
+            "node": "slack_notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "email_rejected": {
+      "main": [
+        [
+          {
+            "node": "slack_notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["month-end", "notifications", "email", "slack"],
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

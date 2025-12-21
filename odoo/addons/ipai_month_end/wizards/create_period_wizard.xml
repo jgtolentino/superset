@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_create_period_wizard_form" model="ir.ui.view">
+        <field name="name">ipai.month.end.create.period.wizard.form</field>
+        <field name="model">ipai.month.end.create.period.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Create Month-End Period">
+                <group>
+                    <group>
+                        <field name="year"/>
+                        <field name="month"/>
+                    </group>
+                    <group>
+                        <field name="checklist_id"/>
+                        <field name="close_days"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_create_period" type="object" string="Create Period" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_create_period_wizard" model="ir.actions.act_window">
+        <field name="name">Create Period</field>
+        <field name="res_model">ipai.month.end.create.period.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Add to menu -->
+    <menuitem id="menu_create_period"
+              name="Create Period"
+              parent="menu_month_end_periods"
+              action="action_create_period_wizard"
+              sequence="5"/>
+</odoo>

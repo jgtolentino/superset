@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Default 2025 Filing Schedule -->
+        <record id="bir_schedule_2025" model="ipai.bir.filing.schedule">
+            <field name="name">BIR Filing Schedule 2025</field>
+            <field name="year">2025</field>
+            <field name="form_ids" eval="[(6, 0, [
+                ref('bir_form_1601c'),
+                ref('bir_form_2550m'),
+                ref('bir_form_0619e'),
+            ])]"/>
+        </record>
+    </data>
+</odoo>

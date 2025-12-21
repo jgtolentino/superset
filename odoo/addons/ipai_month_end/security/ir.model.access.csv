@@ -1,0 +1,11 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_month_end_period_user,month.end.period.user,model_ipai_month_end_period,base.group_user,1,0,0,0
+access_month_end_period_accountant,month.end.period.accountant,model_ipai_month_end_period,account.group_account_user,1,1,1,0
+access_month_end_period_manager,month.end.period.manager,model_ipai_month_end_period,account.group_account_manager,1,1,1,1
+access_month_end_task_user,month.end.task.user,model_ipai_month_end_task,base.group_user,1,0,0,0
+access_month_end_task_accountant,month.end.task.accountant,model_ipai_month_end_task,account.group_account_user,1,1,1,0
+access_month_end_task_manager,month.end.task.manager,model_ipai_month_end_task,account.group_account_manager,1,1,1,1
+access_month_end_checklist_user,month.end.checklist.user,model_ipai_month_end_checklist,base.group_user,1,0,0,0
+access_month_end_checklist_manager,month.end.checklist.manager,model_ipai_month_end_checklist,account.group_account_manager,1,1,1,1
+access_month_end_task_template_user,month.end.task.template.user,model_ipai_month_end_task_template,base.group_user,1,0,0,0
+access_month_end_task_template_manager,month.end.task.template.manager,model_ipai_month_end_task_template,account.group_account_manager,1,1,1,1

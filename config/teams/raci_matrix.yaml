@@ -1,0 +1,381 @@
+# RACI Matrix for TBWA Month-End Close Process
+# R = Responsible (does the work)
+# A = Accountable (approves/signs off)
+# C = Consulted (provides input)
+# I = Informed (kept updated)
+---
+version: "1.0"
+effective_date: "2025-11-01"
+team: TBWA-PH-FIN
+
+# Legend for user codes:
+# CKVC = Finance Controller
+# RIM = Finance Manager
+# JPAL = Senior Accountant (Tax & Reporting)
+# LAS = Senior Accountant (AP/Disbursements)
+# BOM = Senior Accountant (Tax Compliance)
+# JI = Treasury Analyst
+# JPL = Senior Accountant (Project Accounting)
+
+raci_matrix:
+  # Day 1 Tasks
+  - task: Payroll processing begins
+    day: 1
+    time: "08:00"
+    category: payroll
+    responsible: RIM
+    accountable: CKVC
+    consulted: []
+    informed: [JPAL, LAS]
+
+  - task: Email reminder sent to stakeholders
+    day: 1
+    time: "10:00"
+    category: other
+    responsible: RIM
+    accountable: RIM
+    consulted: []
+    informed: [ALL]
+
+  - task: VAT data compilation
+    day: 1
+    time: "14:00"
+    category: vat
+    responsible: JPAL
+    accountable: RIM
+    consulted: [BOM]
+    informed: [CKVC]
+
+  - task: Status dashboard updated
+    day: 1
+    time: "16:00"
+    category: reporting
+    responsible: JPAL
+    accountable: RIM
+    consulted: []
+    informed: [CKVC]
+
+  # Day 2 Tasks
+  - task: Rent & leases recording
+    day: 2
+    time: "09:00"
+    category: accruals
+    responsible: CKVC
+    accountable: CKVC
+    consulted: [LAS]
+    informed: [RIM]
+
+  - task: Accruals entry
+    day: 2
+    time: "11:00"
+    category: accruals
+    responsible: CKVC
+    accountable: CKVC
+    consulted: [JPAL]
+    informed: [RIM]
+
+  - task: CA liquidations begin
+    day: 2
+    time: "14:00"
+    category: liquidations
+    responsible: LAS
+    accountable: RIM
+    consulted: []
+    informed: [CKVC]
+
+  # Day 3 Tasks
+  - task: Client accruals
+    day: 3
+    time: "08:00"
+    category: accruals
+    responsible: JPAL
+    accountable: RIM
+    consulted: [JPL]
+    informed: [CKVC]
+
+  - task: Payroll task review
+    day: 3
+    time: "10:00"
+    category: payroll
+    responsible: RIM
+    accountable: CKVC
+    consulted: []
+    informed: []
+
+  - task: Payroll approved
+    day: 3
+    time: "12:00"
+    category: payroll
+    responsible: CKVC
+    accountable: CKVC
+    consulted: [RIM]
+    informed: [ALL]
+
+  - task: WIP management
+    day: 3
+    time: "14:00"
+    category: wip
+    responsible: JPAL
+    accountable: RIM
+    consulted: [JPL]
+    informed: [CKVC]
+
+  # Day 4 Tasks
+  - task: Treasury & FX revaluation
+    day: 4
+    time: "08:00"
+    category: treasury
+    responsible: CKVC
+    accountable: CKVC
+    consulted: [JI]
+    informed: [RIM]
+
+  - task: VAT data review
+    day: 4
+    time: "10:00"
+    category: vat
+    responsible: RIM
+    accountable: CKVC
+    consulted: [JPAL, BOM]
+    informed: []
+
+  - task: Amortizations
+    day: 4
+    time: "12:00"
+    category: other
+    responsible: BOM
+    accountable: RIM
+    consulted: [LAS]
+    informed: [CKVC]
+
+  - task: AR/AP aging analysis
+    day: 4
+    time: "14:00"
+    category: reconciliation
+    responsible: JPAL
+    accountable: RIM
+    consulted: [LAS]
+    informed: [CKVC]
+
+  - task: Intercompany reconciliation
+    day: 4
+    time: "16:00"
+    category: reconciliation
+    responsible: JPAL
+    accountable: RIM
+    consulted: []
+    informed: [CKVC, regional_rep]
+
+  # Day 5 Tasks
+  - task: Regional reporting
+    day: 5
+    time: "08:00"
+    category: reporting
+    responsible: CKVC
+    accountable: CKVC
+    consulted: [RIM]
+    informed: [regional_rep]
+
+  - task: Prior period review
+    day: 5
+    time: "10:00"
+    category: review
+    responsible: RIM
+    accountable: CKVC
+    consulted: [JPAL]
+    informed: []
+
+  - task: FX & Treasury adjustments
+    day: 5
+    time: "12:00"
+    category: treasury
+    responsible: JI
+    accountable: CKVC
+    consulted: []
+    informed: [RIM]
+
+  - task: Final reclassifications
+    day: 5
+    time: "14:00"
+    category: other
+    responsible: RIM
+    accountable: CKVC
+    consulted: [JPAL]
+    informed: []
+
+  - task: WIP/OOP reconciliation
+    day: 5
+    time: "16:00"
+    category: wip
+    responsible: JPL
+    accountable: RIM
+    consulted: [JPAL]
+    informed: [CKVC]
+
+  # Day 6 Tasks
+  - task: Final TB review
+    day: 6
+    time: "09:00"
+    category: review
+    responsible: RIM
+    accountable: CKVC
+    consulted: [JPAL, LAS, BOM]
+    informed: []
+
+  - task: Escalation check (auto)
+    day: 6
+    time: "11:00"
+    category: other
+    responsible: SYSTEM
+    accountable: RIM
+    consulted: []
+    informed: [CKVC]
+
+  - task: TB approved
+    day: 6
+    time: "13:00"
+    category: review
+    responsible: RIM
+    accountable: CKVC
+    consulted: []
+    informed: [ALL]
+
+  # Day 7 Tasks
+  - task: Final TB sign-off
+    day: 7
+    time: "09:00"
+    category: review
+    responsible: CKVC
+    accountable: CKVC
+    consulted: [RIM]
+    informed: [ALL]
+
+  - task: All adjusting JEs posted
+    day: 7
+    time: "10:00"
+    category: other
+    responsible: JPAL
+    accountable: RIM
+    consulted: [LAS, BOM]
+    informed: [CKVC]
+
+  - task: GL closed for month
+    day: 7
+    time: "11:00"
+    category: other
+    responsible: RIM
+    accountable: CKVC
+    consulted: []
+    informed: [ALL]
+
+  - task: Payment approval batch
+    day: 7
+    time: "14:00"
+    category: review
+    responsible: CKVC
+    accountable: CKVC
+    consulted: [RIM]
+    informed: [LAS]
+
+  # Day 8-10 Tasks (BIR Filing)
+  - task: BIR 1601-C prepared
+    day: 8
+    time: "09:00"
+    category: filing
+    responsible: BOM
+    accountable: RIM
+    consulted: []
+    informed: [CKVC]
+
+  - task: BIR 1601-C reviewed
+    day: 9
+    time: "10:00"
+    category: filing
+    responsible: RIM
+    accountable: CKVC
+    consulted: [BOM]
+    informed: []
+
+  - task: BIR 1601-C approved
+    day: 10
+    time: "09:00"
+    category: filing
+    responsible: CKVC
+    accountable: CKVC
+    consulted: [RIM]
+    informed: [BOM]
+
+  - task: BIR 1601-C filed
+    day: 10
+    time: "14:00"
+    category: filing
+    responsible: BOM
+    accountable: CKVC
+    consulted: []
+    informed: [RIM, ALL]
+
+  # Day 20-25 (VAT Filing)
+  - task: BIR 2550M VAT prepared
+    day: 20
+    time: "09:00"
+    category: vat
+    responsible: JPAL
+    accountable: RIM
+    consulted: [BOM]
+    informed: [CKVC]
+
+  - task: BIR 2550M VAT reviewed
+    day: 22
+    time: "10:00"
+    category: vat
+    responsible: RIM
+    accountable: CKVC
+    consulted: [JPAL]
+    informed: []
+
+  - task: BIR 2550M VAT approved
+    day: 24
+    time: "09:00"
+    category: vat
+    responsible: CKVC
+    accountable: CKVC
+    consulted: [RIM]
+    informed: [JPAL, BOM]
+
+  - task: BIR 2550M VAT filed
+    day: 25
+    time: "14:00"
+    category: vat
+    responsible: BOM
+    accountable: CKVC
+    consulted: []
+    informed: [RIM, JPAL, ALL]
+
+# Summary Statistics
+summary:
+  total_tasks: 33
+  by_category:
+    payroll: 3
+    vat: 5
+    accruals: 4
+    liquidations: 1
+    wip: 3
+    treasury: 2
+    reconciliation: 3
+    reporting: 3
+    review: 5
+    filing: 4
+    other: 6
+
+  by_responsible:
+    CKVC: 9
+    RIM: 10
+    JPAL: 7
+    LAS: 1
+    BOM: 4
+    JI: 1
+    JPL: 1
+
+  by_accountable:
+    CKVC: 23
+    RIM: 10

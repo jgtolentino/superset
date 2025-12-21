@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Month-End Task Views -->
+
+    <!-- Tree View -->
+    <record id="view_month_end_task_tree" model="ir.ui.view">
+        <field name="name">ipai.month.end.task.tree</field>
+        <field name="model">ipai.month.end.task</field>
+        <field name="arch" type="xml">
+            <tree string="Month-End Tasks" decoration-danger="is_overdue" decoration-success="state == 'done'" decoration-warning="state == 'blocked'">
+                <field name="period_id"/>
+                <field name="day_number"/>
+                <field name="scheduled_time"/>
+                <field name="name"/>
+                <field name="task_category"/>
+                <field name="raci_responsible_id"/>
+                <field name="raci_accountable_id"/>
+                <field name="deadline"/>
+                <field name="state" widget="badge" decoration-info="state == 'pending'" decoration-primary="state == 'in_progress'" decoration-warning="state == 'review'" decoration-success="state == 'done'" decoration-danger="state == 'blocked'"/>
+                <field name="is_mandatory"/>
+                <field name="is_overdue" column_invisible="1"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Kanban View -->
+    <record id="view_month_end_task_kanban" model="ir.ui.view">
+        <field name="name">ipai.month.end.task.kanban</field>
+        <field name="model">ipai.month.end.task</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" class="o_kanban_small_column">
+                <field name="name"/>
+                <field name="period_id"/>
+                <field name="raci_responsible_id"/>
+                <field name="deadline"/>
+                <field name="is_overdue"/>
+                <field name="task_category"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_card oe_kanban_global_click #{record.is_overdue.raw_value ? 'oe_kanban_color_2' : ''}">
+                            <div class="oe_kanban_content">
+                                <div class="o_kanban_record_title">
+                                    <strong><field name="name"/></strong>
+                                </div>
+                                <div class="o_kanban_record_body">
+                                    <field name="period_id"/>
+                                    <div>
+                                        <span class="badge rounded-pill">Day <field name="day_number"/></span>
+                                        <field name="task_category" widget="badge"/>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_bottom">
+                                    <div class="oe_kanban_bottom_left">
+                                        <field name="deadline"/>
+                                    </div>
+                                    <div class="oe_kanban_bottom_right">
+                                        <field name="raci_responsible_id" widget="many2one_avatar_user"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_month_end_task_form" model="ir.ui.view">
+        <field name="name">ipai.month.end.task.form</field>
+        <field name="model">ipai.month.end.task</field>
+        <field name="arch" type="xml">
+            <form string="Month-End Task">
+                <header>
+                    <button name="action_start" type="object" string="Start" class="btn-primary" invisible="state != 'pending'"/>
+                    <button name="action_submit_review" type="object" string="Submit for Review" class="btn-primary" invisible="state not in ('in_progress', 'blocked')"/>
+                    <button name="action_approve" type="object" string="Approve" class="btn-success" invisible="state != 'review'"/>
+                    <button name="action_reject" type="object" string="Reject" class="btn-warning" invisible="state != 'review'"/>
+                    <button name="action_mark_blocked" type="object" string="Mark Blocked" class="btn-warning" invisible="state != 'in_progress'"/>
+                    <button name="action_cancel" type="object" string="Cancel" invisible="state == 'done'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="pending,in_progress,review,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Task Name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Task Information">
+                            <field name="period_id"/>
+                            <field name="task_category"/>
+                            <field name="is_mandatory"/>
+                        </group>
+                        <group string="Schedule">
+                            <field name="day_number"/>
+                            <field name="scheduled_time"/>
+                            <field name="deadline"/>
+                            <field name="is_overdue" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="RACI Assignment">
+                        <group>
+                            <field name="raci_responsible_id"/>
+                            <field name="raci_accountable_id"/>
+                        </group>
+                        <group>
+                            <field name="raci_consulted_ids" widget="many2many_tags"/>
+                            <field name="raci_informed_ids" widget="many2many_tags"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Description" name="description">
+                            <field name="description"/>
+                        </page>
+                        <page string="Completion" name="completion" invisible="state != 'done'">
+                            <group>
+                                <field name="completed_date"/>
+                                <field name="completed_by_id"/>
+                                <field name="notes"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_month_end_task_search" model="ir.ui.view">
+        <field name="name">ipai.month.end.task.search</field>
+        <field name="model">ipai.month.end.task</field>
+        <field name="arch" type="xml">
+            <search string="Search Tasks">
+                <field name="name"/>
+                <field name="period_id"/>
+                <field name="raci_responsible_id"/>
+                <filter string="My Tasks" name="my_tasks" domain="[('raci_responsible_id', '=', uid)]"/>
+                <filter string="My Approvals" name="my_approvals" domain="[('raci_accountable_id', '=', uid), ('state', '=', 'review')]"/>
+                <separator/>
+                <filter string="Pending" name="pending" domain="[('state', '=', 'pending')]"/>
+                <filter string="In Progress" name="in_progress" domain="[('state', '=', 'in_progress')]"/>
+                <filter string="Blocked" name="blocked" domain="[('state', '=', 'blocked')]"/>
+                <filter string="Review" name="review" domain="[('state', '=', 'review')]"/>
+                <filter string="Completed" name="done" domain="[('state', '=', 'done')]"/>
+                <separator/>
+                <filter string="Overdue" name="overdue" domain="[('is_overdue', '=', True)]"/>
+                <filter string="Mandatory" name="mandatory" domain="[('is_mandatory', '=', True)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Period" name="group_period" context="{'group_by': 'period_id'}"/>
+                    <filter string="Day" name="group_day" context="{'group_by': 'day_number'}"/>
+                    <filter string="Category" name="group_category" context="{'group_by': 'task_category'}"/>
+                    <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Responsible" name="group_responsible" context="{'group_by': 'raci_responsible_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_month_end_task" model="ir.actions.act_window">
+        <field name="name">Month-End Tasks</field>
+        <field name="res_model">ipai.month.end.task</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="search_view_id" ref="view_month_end_task_search"/>
+        <field name="context">{'search_default_my_tasks': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No tasks found
+            </p>
+            <p>
+                Tasks are automatically generated when you start a month-end close period.
+            </p>
+        </field>
+    </record>
+
+    <!-- Checklist Views -->
+    <record id="view_month_end_checklist_tree" model="ir.ui.view">
+        <field name="name">ipai.month.end.checklist.tree</field>
+        <field name="model">ipai.month.end.checklist</field>
+        <field name="arch" type="xml">
+            <tree string="Checklists">
+                <field name="name"/>
+                <field name="task_count"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_month_end_checklist_form" model="ir.ui.view">
+        <field name="name">ipai.month.end.checklist.form</field>
+        <field name="model">ipai.month.end.checklist</field>
+        <field name="arch" type="xml">
+            <form string="Checklist">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" type="object" name="action_view_tasks" icon="fa-tasks">
+                            <field string="Tasks" name="task_count" widget="statinfo"/>
+                        </button>
+                    </div>
+                    <group>
+                        <field name="name"/>
+                        <field name="active"/>
+                        <field name="company_id" groups="base.group_multi_company"/>
+                    </group>
+                    <field name="description" placeholder="Checklist description..."/>
+                    <notebook>
+                        <page string="Task Templates" name="tasks">
+                            <field name="task_template_ids">
+                                <tree editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="day_offset"/>
+                                    <field name="scheduled_time"/>
+                                    <field name="name"/>
+                                    <field name="task_category"/>
+                                    <field name="raci_responsible_id"/>
+                                    <field name="raci_accountable_id"/>
+                                    <field name="is_mandatory"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_month_end_checklist" model="ir.actions.act_window">
+        <field name="name">Checklist Templates</field>
+        <field name="res_model">ipai.month.end.checklist</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>

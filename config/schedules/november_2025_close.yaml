@@ -1,0 +1,422 @@
+# November 2025 Month-End Close Schedule
+# TBWA Philippines Finance Team
+---
+schedule:
+  name: "November 2025 Month-End Close"
+  code: "2025-11"
+  period:
+    start: "2025-11-01"
+    end: "2025-11-30"
+  close_process:
+    start: "2025-11-24"
+    deadline: "2025-12-03"
+  checklist_template: "Standard Month-End Close (TBWA)"
+
+# Pre-Launch Phase (November 15-23)
+pre_launch:
+  start_date: "2025-11-15"
+  end_date: "2025-11-23"
+  tasks:
+    - id: deploy_month_end
+      name: "Deploy ipai_month_end module (Odoo)"
+      due_date: "2025-11-17"
+      owner: IT_ADMIN
+      status: pending
+      dependencies: []
+
+    - id: deploy_bir_compliance
+      name: "Deploy ipai_bir_compliance module"
+      due_date: "2025-11-17"
+      owner: IT_ADMIN
+      status: pending
+      dependencies: [deploy_month_end]
+
+    - id: deploy_approval_workflow
+      name: "Deploy ipai_approval_workflow module"
+      due_date: "2025-11-17"
+      owner: IT_ADMIN
+      status: pending
+      dependencies: []
+
+    - id: create_tbwa_team
+      name: "Create TBWA team in Odoo (12 users + roles)"
+      due_date: "2025-11-18"
+      owner: IT_ADMIN
+      status: pending
+      dependencies: [deploy_month_end, deploy_approval_workflow]
+      user_count: 12
+      config_file: "config/teams/tbwa_team.yaml"
+
+    - id: configure_raci
+      name: "Configure RACI matrix"
+      due_date: "2025-11-19"
+      owner: RIM
+      status: pending
+      dependencies: [create_tbwa_team]
+      config_file: "config/teams/raci_matrix.yaml"
+
+    - id: test_n8n_sync
+      name: "Test n8n → Odoo sync"
+      due_date: "2025-11-20"
+      owner: IT_ADMIN
+      status: pending
+      dependencies: [deploy_month_end, configure_raci]
+      workflows:
+        - "workflows/n8n/month_end_sync.json"
+        - "workflows/n8n/task_notifications.json"
+        - "workflows/n8n/bir_filing_reminder.json"
+
+    - id: create_nov_schedule
+      name: "Create November 2025 schedule in Odoo"
+      due_date: "2025-11-21"
+      owner: RIM
+      status: pending
+      dependencies: [test_n8n_sync]
+
+    - id: user_training
+      name: "User training session"
+      due_date: "2025-11-22"
+      owner: RIM
+      status: pending
+      dependencies: [create_nov_schedule]
+
+    - id: go_live_approval
+      name: "Go-live approval"
+      due_date: "2025-11-23"
+      owner: CKVC
+      status: pending
+      dependencies: [user_training]
+
+# Month-End Execution Phase (November 24 - December 3)
+execution:
+  day_1:
+    date: "2025-11-24"
+    day_name: "Monday"
+    tasks:
+      - time: "08:00"
+        task: "Payroll processing begins"
+        responsible: RIM
+        accountable: CKVC
+        category: payroll
+
+      - time: "10:00"
+        task: "Email reminder sent to all stakeholders"
+        responsible: RIM
+        accountable: RIM
+        category: other
+
+      - time: "14:00"
+        task: "VAT data compilation"
+        responsible: JPAL
+        accountable: RIM
+        category: vat
+
+      - time: "16:00"
+        task: "Status dashboard updated"
+        responsible: JPAL
+        accountable: RIM
+        category: reporting
+
+  day_2:
+    date: "2025-11-25"
+    day_name: "Tuesday"
+    tasks:
+      - time: "09:00"
+        task: "Rent & leases recording"
+        responsible: CKVC
+        accountable: CKVC
+        category: accruals
+
+      - time: "11:00"
+        task: "Accruals entry"
+        responsible: CKVC
+        accountable: CKVC
+        category: accruals
+
+      - time: "14:00"
+        task: "CA liquidations begin"
+        responsible: LAS
+        accountable: RIM
+        category: liquidations
+
+  day_3:
+    date: "2025-11-26"
+    day_name: "Wednesday"
+    tasks:
+      - time: "08:00"
+        task: "Client accruals"
+        responsible: JPAL
+        accountable: RIM
+        category: accruals
+
+      - time: "10:00"
+        task: "Payroll task review"
+        responsible: RIM
+        accountable: CKVC
+        category: payroll
+
+      - time: "12:00"
+        task: "Payroll approved"
+        responsible: CKVC
+        accountable: CKVC
+        category: payroll
+
+      - time: "14:00"
+        task: "WIP management"
+        responsible: JPAL
+        accountable: RIM
+        category: wip
+
+  day_4:
+    date: "2025-11-27"
+    day_name: "Thursday (Thanksgiving US)"
+    tasks:
+      - time: "08:00"
+        task: "Treasury & FX revaluation"
+        responsible: CKVC
+        accountable: CKVC
+        category: treasury
+
+      - time: "10:00"
+        task: "VAT data review"
+        responsible: RIM
+        accountable: CKVC
+        category: vat
+
+      - time: "12:00"
+        task: "Amortizations"
+        responsible: BOM
+        accountable: RIM
+        consulted: [LAS]
+        category: other
+
+      - time: "14:00"
+        task: "AR/AP aging analysis"
+        responsible: JPAL
+        accountable: RIM
+        consulted: [LAS]
+        category: reconciliation
+
+      - time: "16:00"
+        task: "Intercompany reconciliation"
+        responsible: JPAL
+        accountable: RIM
+        category: reconciliation
+
+  day_5:
+    date: "2025-11-28"
+    day_name: "Friday"
+    tasks:
+      - time: "08:00"
+        task: "Regional reporting"
+        responsible: CKVC
+        accountable: CKVC
+        category: reporting
+
+      - time: "10:00"
+        task: "Prior period review"
+        responsible: RIM
+        accountable: CKVC
+        category: review
+
+      - time: "12:00"
+        task: "FX & Treasury adjustments"
+        responsible: JI
+        accountable: CKVC
+        category: treasury
+
+      - time: "14:00"
+        task: "Final reclassifications"
+        responsible: RIM
+        accountable: CKVC
+        category: other
+
+      - time: "16:00"
+        task: "WIP/OOP reconciliation"
+        responsible: JPL
+        accountable: RIM
+        category: wip
+
+  day_6:
+    date: "2025-11-29"
+    day_name: "Saturday"
+    tasks:
+      - time: "09:00"
+        task: "Final TB review"
+        responsible: RIM
+        accountable: CKVC
+        category: review
+
+      - time: "11:00"
+        task: "Escalation check (auto)"
+        responsible: SYSTEM
+        accountable: RIM
+        category: other
+        automated: true
+
+      - time: "13:00"
+        task: "TB approved by RIM"
+        responsible: RIM
+        accountable: CKVC
+        category: review
+
+  day_7:
+    date: "2025-11-30"
+    day_name: "Sunday"
+    tasks:
+      - time: "09:00"
+        task: "Final TB sign-off"
+        responsible: CKVC
+        accountable: CKVC
+        category: review
+        milestone: true
+
+      - time: "10:00"
+        task: "All adjusting JEs posted"
+        responsible: JPAL
+        accountable: RIM
+        category: other
+
+      - time: "11:00"
+        task: "GL closed for November"
+        responsible: RIM
+        accountable: CKVC
+        category: other
+        milestone: true
+
+      - time: "14:00"
+        task: "Payment approval batch"
+        responsible: CKVC
+        accountable: CKVC
+        category: review
+
+  # Post-Close: BIR 1601-C Filing
+  day_8:
+    date: "2025-12-01"
+    day_name: "Monday"
+    tasks:
+      - time: "09:00"
+        task: "November close complete - verification"
+        responsible: RIM
+        accountable: CKVC
+        category: review
+        milestone: true
+
+      - time: "10:00"
+        task: "BIR 1601-C prepared"
+        responsible: BOM
+        accountable: RIM
+        category: filing
+
+  day_9:
+    date: "2025-12-02"
+    day_name: "Tuesday"
+    tasks:
+      - time: "10:00"
+        task: "BIR 1601-C reviewed"
+        responsible: RIM
+        accountable: CKVC
+        category: filing
+
+  day_10:
+    date: "2025-12-03"
+    day_name: "Wednesday"
+    tasks:
+      - time: "09:00"
+        task: "BIR 1601-C approved"
+        responsible: CKVC
+        accountable: CKVC
+        category: filing
+
+      - time: "14:00"
+        task: "BIR 1601-C filed with BIR"
+        responsible: BOM
+        accountable: CKVC
+        category: filing
+        milestone: true
+        bir_form: "1601-C"
+        bir_deadline: "2025-12-10"
+
+# VAT Filing Phase (December 20-25)
+vat_filing:
+  day_20:
+    date: "2025-12-20"
+    day_name: "Saturday"
+    tasks:
+      - time: "09:00"
+        task: "BIR 2550M VAT prepared"
+        responsible: JPAL
+        accountable: RIM
+        category: vat
+        bir_form: "2550M"
+
+  day_22:
+    date: "2025-12-22"
+    day_name: "Monday"
+    tasks:
+      - time: "10:00"
+        task: "BIR 2550M VAT reviewed"
+        responsible: RIM
+        accountable: CKVC
+        category: vat
+
+  day_24:
+    date: "2025-12-24"
+    day_name: "Wednesday (Christmas Eve)"
+    tasks:
+      - time: "09:00"
+        task: "BIR 2550M VAT approved"
+        responsible: CKVC
+        accountable: CKVC
+        category: vat
+
+  day_25:
+    date: "2025-12-25"
+    day_name: "Thursday (Christmas Day)"
+    note: "Holiday - filing may be moved to next business day"
+    tasks:
+      - time: "14:00"
+        task: "BIR 2550M VAT filed"
+        responsible: BOM
+        accountable: CKVC
+        category: vat
+        milestone: true
+        bir_form: "2550M"
+        bir_deadline: "2025-12-20"
+        holiday_adjustment: true
+
+# Key Milestones Summary
+milestones:
+  - date: "2025-11-23"
+    event: "Go-live approval"
+    owner: CKVC
+
+  - date: "2025-11-24"
+    event: "Month-end close process begins"
+    owner: RIM
+
+  - date: "2025-11-30"
+    event: "GL closed for November"
+    owner: CKVC
+
+  - date: "2025-12-01"
+    event: "November close complete"
+    owner: CKVC
+
+  - date: "2025-12-03"
+    event: "BIR 1601-C filed"
+    owner: BOM
+
+  - date: "2025-12-20"
+    event: "BIR 2550M VAT deadline"
+    owner: BOM
+
+# Statistics
+statistics:
+  total_pre_launch_tasks: 9
+  total_execution_tasks: 33
+  total_vat_tasks: 4
+  total_milestones: 6
+  execution_days: 10
+  business_days: 8
+  weekend_days: 2

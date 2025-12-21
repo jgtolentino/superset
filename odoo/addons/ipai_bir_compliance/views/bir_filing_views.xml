@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- BIR Filing Views -->
+
+    <!-- Tree View -->
+    <record id="view_bir_filing_tree" model="ir.ui.view">
+        <field name="name">ipai.bir.filing.tree</field>
+        <field name="model">ipai.bir.filing</field>
+        <field name="arch" type="xml">
+            <tree string="BIR Filings" decoration-danger="is_overdue" decoration-success="state == 'filed'" decoration-muted="state == 'cancelled'">
+                <field name="name"/>
+                <field name="form_id"/>
+                <field name="period_year"/>
+                <field name="period_month"/>
+                <field name="period_quarter"/>
+                <field name="due_date"/>
+                <field name="tax_due" sum="Total Tax Due"/>
+                <field name="total_amount" sum="Total Amount"/>
+                <field name="preparer_id"/>
+                <field name="is_overdue" column_invisible="1"/>
+                <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state in ('preparing', 'review')" decoration-success="state in ('approved', 'filed')" decoration-danger="state == 'cancelled'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Calendar View -->
+    <record id="view_bir_filing_calendar" model="ir.ui.view">
+        <field name="name">ipai.bir.filing.calendar</field>
+        <field name="model">ipai.bir.filing</field>
+        <field name="arch" type="xml">
+            <calendar string="Filing Due Dates" date_start="due_date" color="state" mode="month">
+                <field name="form_id"/>
+                <field name="name"/>
+                <field name="state"/>
+            </calendar>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_bir_filing_form" model="ir.ui.view">
+        <field name="name">ipai.bir.filing.form</field>
+        <field name="model">ipai.bir.filing</field>
+        <field name="arch" type="xml">
+            <form string="BIR Filing">
+                <header>
+                    <button name="action_prepare" type="object" string="Start Preparation" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_submit_review" type="object" string="Submit for Review" class="btn-primary" invisible="state != 'preparing'"/>
+                    <button name="action_approve" type="object" string="Approve" class="btn-success" invisible="state != 'review'" groups="ipai_bir_compliance.group_bir_manager"/>
+                    <button name="action_file" type="object" string="Mark as Filed" class="btn-success" invisible="state != 'approved'"/>
+                    <button name="action_cancel" type="object" string="Cancel" invisible="state in ('filed', 'cancelled')"/>
+                    <button name="action_reset_draft" type="object" string="Reset to Draft" invisible="state in ('draft', 'filed')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,preparing,review,approved,filed"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" type="object" name="action_view_attachments" icon="fa-paperclip">
+                            <field string="Attachments" name="attachment_count" widget="statinfo"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Form Information">
+                            <field name="form_id" readonly="state != 'draft'"/>
+                            <field name="period_year" readonly="state != 'draft'"/>
+                            <field name="period_month" invisible="form_id and form_id.frequency != 'monthly'" readonly="state != 'draft'"/>
+                            <field name="period_quarter" invisible="form_id and form_id.frequency != 'quarterly'" readonly="state != 'draft'"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Dates">
+                            <field name="period_start" readonly="1"/>
+                            <field name="period_end" readonly="1"/>
+                            <field name="due_date" readonly="state not in ('draft', 'preparing')"/>
+                            <field name="filing_date" readonly="state != 'filed'"/>
+                            <field name="is_overdue" readonly="1"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Tax Amounts">
+                            <field name="tax_base"/>
+                            <field name="tax_due"/>
+                            <field name="tax_credits"/>
+                            <field name="tax_payable" readonly="1"/>
+                            <field name="penalty"/>
+                            <field name="total_amount" readonly="1"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group string="Assignment">
+                            <field name="preparer_id"/>
+                            <field name="reviewer_id"/>
+                            <field name="approver_id" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Filing Details" invisible="state != 'filed'">
+                        <group>
+                            <field name="confirmation_number"/>
+                            <field name="transaction_code"/>
+                        </group>
+                        <group>
+                            <field name="payment_reference"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Notes" name="notes">
+                            <field name="notes"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_bir_filing_search" model="ir.ui.view">
+        <field name="name">ipai.bir.filing.search</field>
+        <field name="model">ipai.bir.filing</field>
+        <field name="arch" type="xml">
+            <search string="Search Filings">
+                <field name="name"/>
+                <field name="form_id"/>
+                <field name="preparer_id"/>
+                <filter string="My Filings" name="my_filings" domain="[('preparer_id', '=', uid)]"/>
+                <separator/>
+                <filter string="Draft" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Preparing" name="preparing" domain="[('state', '=', 'preparing')]"/>
+                <filter string="Under Review" name="review" domain="[('state', '=', 'review')]"/>
+                <filter string="Approved" name="approved" domain="[('state', '=', 'approved')]"/>
+                <filter string="Filed" name="filed" domain="[('state', '=', 'filed')]"/>
+                <separator/>
+                <filter string="Overdue" name="overdue" domain="[('is_overdue', '=', True)]"/>
+                <filter string="Due This Week" name="due_week" domain="[('due_date', '&gt;=', (context_today()).strftime('%Y-%m-%d')), ('due_date', '&lt;=', (context_today() + relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Form" name="group_form" context="{'group_by': 'form_id'}"/>
+                    <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Year" name="group_year" context="{'group_by': 'period_year'}"/>
+                    <filter string="Due Date" name="group_due" context="{'group_by': 'due_date:month'}"/>
+                    <filter string="Preparer" name="group_preparer" context="{'group_by': 'preparer_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Actions -->
+    <record id="action_bir_filing" model="ir.actions.act_window">
+        <field name="name">BIR Filings</field>
+        <field name="res_model">ipai.bir.filing</field>
+        <field name="view_mode">tree,form,calendar</field>
+        <field name="search_view_id" ref="view_bir_filing_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first BIR filing
+            </p>
+            <p>
+                Track and manage your BIR tax filings with due dates and approvals.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_bir_filing_pending" model="ir.actions.act_window">
+        <field name="name">Pending Filings</field>
+        <field name="res_model">ipai.bir.filing</field>
+        <field name="view_mode">tree,form,calendar</field>
+        <field name="search_view_id" ref="view_bir_filing_search"/>
+        <field name="domain">[('state', 'not in', ('filed', 'cancelled'))]</field>
+    </record>
+
+    <!-- Schedule Views -->
+    <record id="view_bir_schedule_tree" model="ir.ui.view">
+        <field name="name">ipai.bir.filing.schedule.tree</field>
+        <field name="model">ipai.bir.filing.schedule</field>
+        <field name="arch" type="xml">
+            <tree string="Filing Schedules">
+                <field name="name"/>
+                <field name="year"/>
+                <field name="filing_count"/>
+                <field name="completed_count"/>
+                <field name="pending_count"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_bir_schedule_form" model="ir.ui.view">
+        <field name="name">ipai.bir.filing.schedule.form</field>
+        <field name="model">ipai.bir.filing.schedule</field>
+        <field name="arch" type="xml">
+            <form string="Filing Schedule">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" type="object" name="action_view_filings" icon="fa-file-text-o">
+                            <field string="Filings" name="filing_count" widget="statinfo"/>
+                        </button>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="year"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="completed_count" readonly="1"/>
+                            <field name="pending_count" readonly="1"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <group string="Forms to Generate">
+                        <field name="form_ids" widget="many2many_checkboxes"/>
+                    </group>
+                    <footer>
+                        <button name="action_generate_filings" type="object" string="Generate Filings" class="btn-primary"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_bir_schedule" model="ir.actions.act_window">
+        <field name="name">Filing Schedules</field>
+        <field name="res_model">ipai.bir.filing.schedule</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- BIR Form Type Views -->
+
+    <!-- Tree View -->
+    <record id="view_bir_form_tree" model="ir.ui.view">
+        <field name="name">ipai.bir.form.tree</field>
+        <field name="model">ipai.bir.form</field>
+        <field name="arch" type="xml">
+            <tree string="BIR Forms">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="form_type"/>
+                <field name="frequency"/>
+                <field name="due_day"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_bir_form_form" model="ir.ui.view">
+        <field name="name">ipai.bir.form.form</field>
+        <field name="model">ipai.bir.form</field>
+        <field name="arch" type="xml">
+            <form string="BIR Form">
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="code" placeholder="Form Code"/>
+                        </h1>
+                        <h2>
+                            <field name="name" placeholder="Form Name"/>
+                        </h2>
+                    </div>
+                    <group>
+                        <group string="Form Properties">
+                            <field name="form_type"/>
+                            <field name="frequency"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Due Date Rules">
+                            <field name="due_day"/>
+                            <field name="due_month_offset"/>
+                        </group>
+                    </group>
+                    <group string="Workflow">
+                        <field name="approval_rule_id"/>
+                    </group>
+                    <field name="description" placeholder="Description..."/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_bir_form" model="ir.actions.act_window">
+        <field name="name">BIR Form Types</field>
+        <field name="res_model">ipai.bir.form</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Define BIR form types
+            </p>
+            <p>
+                Configure the BIR forms that your company needs to file.
+            </p>
+        </field>
+    </record>
+</odoo>

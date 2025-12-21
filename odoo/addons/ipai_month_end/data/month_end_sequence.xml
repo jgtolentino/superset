@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="seq_month_end_period" model="ir.sequence">
+            <field name="name">Month-End Period</field>
+            <field name="code">ipai.month.end.period</field>
+            <field name="prefix">ME-</field>
+            <field name="padding">4</field>
+        </record>
+    </data>
+</odoo>

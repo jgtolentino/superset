@@ -1,0 +1,309 @@
+{
+  "name": "Month-End Close Sync (n8n → Odoo)",
+  "nodes": [
+    {
+      "id": "trigger_schedule",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [100, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "webhook_trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [100, 500],
+      "parameters": {
+        "path": "month-end-update",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "responseCode": 200
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "odoo_auth",
+      "name": "Odoo Authentication",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [300, 400],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/web/session/authenticate",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "jsonrpc",
+              "value": "2.0"
+            },
+            {
+              "name": "method",
+              "value": "call"
+            },
+            {
+              "name": "params",
+              "value": "={{ JSON.stringify({ db: $env.ODOO_DB, login: $env.ODOO_USER, password: $env.ODOO_PASSWORD }) }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "typeVersion": 4
+    },
+    {
+      "id": "get_active_periods",
+      "name": "Get Active Month-End Periods",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [500, 400],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/web/dataset/search_read",
+        "authentication": "none",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "jsonrpc": "2.0",
+          "method": "call",
+          "params": {
+            "model": "ipai.month.end.period",
+            "domain": [["state", "in", ["pending", "in_progress", "review"]]],
+            "fields": ["id", "name", "code", "state", "progress_percent", "overdue_count", "close_deadline"]
+          }
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "typeVersion": 4
+    },
+    {
+      "id": "get_pending_tasks",
+      "name": "Get Pending Tasks",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [500, 550],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/web/dataset/search_read",
+        "authentication": "none",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "jsonrpc": "2.0",
+          "method": "call",
+          "params": {
+            "model": "ipai.month.end.task",
+            "domain": [["state", "in", ["pending", "in_progress", "blocked"]]],
+            "fields": ["id", "name", "period_id", "day_number", "deadline", "state", "is_overdue", "raci_responsible_id", "raci_accountable_id"]
+          }
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "typeVersion": 4
+    },
+    {
+      "id": "check_overdue",
+      "name": "Check for Overdue Tasks",
+      "type": "n8n-nodes-base.if",
+      "position": [700, 400],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.result.records.filter(t => t.is_overdue).length }}",
+              "operation": "largerThan",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "send_overdue_alert",
+      "name": "Send Overdue Alert",
+      "type": "n8n-nodes-base.slack",
+      "position": [900, 300],
+      "parameters": {
+        "channel": "#finance-alerts",
+        "text": "⚠️ *Month-End Close Alert*\n\n{{ $json.result.records.filter(t => t.is_overdue).length }} tasks are overdue!\n\nPlease check the Odoo dashboard for details.",
+        "otherOptions": {
+          "mrkdwn": true
+        }
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "update_superset_dashboard",
+      "name": "Update Superset Dashboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 500],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPERSET_URL }}/api/v1/chart/warm_up_cache",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "chart_id": "={{ $env.MONTH_END_DASHBOARD_CHART_ID }}"
+        }
+      },
+      "typeVersion": 4
+    },
+    {
+      "id": "log_sync",
+      "name": "Log Sync Result",
+      "type": "n8n-nodes-base.set",
+      "position": [1100, 400],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "sync_status",
+              "value": "completed"
+            },
+            {
+              "name": "sync_time",
+              "value": "={{ new Date().toISOString() }}"
+            },
+            {
+              "name": "periods_synced",
+              "value": "={{ $node['get_active_periods'].json.result.records.length }}"
+            },
+            {
+              "name": "tasks_synced",
+              "value": "={{ $node['get_pending_tasks'].json.result.records.length }}"
+            }
+          ]
+        }
+      },
+      "typeVersion": 3
+    }
+  ],
+  "connections": {
+    "trigger_schedule": {
+      "main": [
+        [
+          {
+            "node": "odoo_auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "webhook_trigger": {
+      "main": [
+        [
+          {
+            "node": "odoo_auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "odoo_auth": {
+      "main": [
+        [
+          {
+            "node": "get_active_periods",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "get_pending_tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_pending_tasks": {
+      "main": [
+        [
+          {
+            "node": "check_overdue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_overdue": {
+      "main": [
+        [
+          {
+            "node": "send_overdue_alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "update_superset_dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_active_periods": {
+      "main": [
+        [
+          {
+            "node": "update_superset_dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update_superset_dashboard": {
+      "main": [
+        [
+          {
+            "node": "log_sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["month-end", "odoo", "sync", "superset"],
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

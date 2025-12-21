@@ -1,0 +1,220 @@
+{
+  "name": "BIR Filing Reminders",
+  "nodes": [
+    {
+      "id": "daily_check",
+      "name": "Daily Check Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [100, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "odoo_auth",
+      "name": "Odoo Authentication",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [300, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/web/session/authenticate",
+        "authentication": "none",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "jsonrpc": "2.0",
+          "method": "call",
+          "params": {
+            "db": "={{ $env.ODOO_DB }}",
+            "login": "={{ $env.ODOO_USER }}",
+            "password": "={{ $env.ODOO_PASSWORD }}"
+          }
+        }
+      },
+      "typeVersion": 4
+    },
+    {
+      "id": "get_upcoming_filings",
+      "name": "Get Upcoming BIR Filings",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [500, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/web/dataset/search_read",
+        "authentication": "none",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "jsonrpc": "2.0",
+          "method": "call",
+          "params": {
+            "model": "ipai.bir.filing",
+            "domain": [
+              ["state", "not in", ["filed", "cancelled"]],
+              ["due_date", "<=", "={{ new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }}"]
+            ],
+            "fields": ["id", "name", "form_id", "form_code", "due_date", "state", "preparer_id", "tax_due", "is_overdue"]
+          }
+        }
+      },
+      "typeVersion": 4
+    },
+    {
+      "id": "split_filings",
+      "name": "Split by Due Status",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [700, 300],
+      "parameters": {
+        "batchSize": 1
+      },
+      "typeVersion": 3
+    },
+    {
+      "id": "check_due_status",
+      "name": "Check Due Status",
+      "type": "n8n-nodes-base.if",
+      "position": [900, 300],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.is_overdue }}",
+              "operation": "equal",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "email_overdue_filing",
+      "name": "Email: Overdue Filing",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [1100, 200],
+      "parameters": {
+        "fromEmail": "bir-compliance@tbwa.ph",
+        "toEmail": "finance-managers@tbwa.ph",
+        "subject": "🚨 [BIR] OVERDUE Filing: {{ $json.form_code }} - {{ $json.name }}",
+        "text": "URGENT - BIR Filing Overdue\n\nThe following BIR filing is OVERDUE:\n\nForm: {{ $json.form_code }}\nReference: {{ $json.name }}\nDue Date: {{ $json.due_date }}\nTax Due: PHP {{ $json.tax_due }}\nStatus: {{ $json.state }}\n\nImmediate action is required to avoid BIR penalties.\n\nPlease log in to Odoo immediately to complete this filing.",
+        "options": {
+          "priority": "high"
+        }
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "email_upcoming_filing",
+      "name": "Email: Upcoming Filing",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [1100, 400],
+      "parameters": {
+        "fromEmail": "bir-compliance@tbwa.ph",
+        "toEmail": "finance-team@tbwa.ph",
+        "subject": "📅 [BIR] Upcoming Filing: {{ $json.form_code }} due {{ $json.due_date }}",
+        "text": "BIR Filing Reminder\n\nThe following BIR filing is due soon:\n\nForm: {{ $json.form_code }}\nReference: {{ $json.name }}\nDue Date: {{ $json.due_date }}\nTax Due: PHP {{ $json.tax_due }}\nCurrent Status: {{ $json.state }}\n\nPlease ensure this filing is completed before the deadline.",
+        "options": {}
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "slack_daily_summary",
+      "name": "Slack Daily Summary",
+      "type": "n8n-nodes-base.slack",
+      "position": [1100, 550],
+      "parameters": {
+        "channel": "#finance-bir",
+        "text": "📋 *Daily BIR Filing Summary*\n\n*Upcoming Filings (next 7 days):* {{ $node['get_upcoming_filings'].json.result.records.length }}\n*Overdue:* {{ $node['get_upcoming_filings'].json.result.records.filter(f => f.is_overdue).length }}\n\nCheck Odoo for details.",
+        "otherOptions": {
+          "mrkdwn": true
+        }
+      },
+      "typeVersion": 2
+    }
+  ],
+  "connections": {
+    "daily_check": {
+      "main": [
+        [
+          {
+            "node": "odoo_auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "odoo_auth": {
+      "main": [
+        [
+          {
+            "node": "get_upcoming_filings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_upcoming_filings": {
+      "main": [
+        [
+          {
+            "node": "split_filings",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "slack_daily_summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_filings": {
+      "main": [
+        [
+          {
+            "node": "check_due_status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_due_status": {
+      "main": [
+        [
+          {
+            "node": "email_overdue_filing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "email_upcoming_filing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["bir", "compliance", "reminders", "daily"],
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

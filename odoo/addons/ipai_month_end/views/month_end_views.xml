@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Month-End Period Views -->
+
+    <!-- Tree View -->
+    <record id="view_month_end_period_tree" model="ir.ui.view">
+        <field name="name">ipai.month.end.period.tree</field>
+        <field name="model">ipai.month.end.period</field>
+        <field name="arch" type="xml">
+            <tree string="Month-End Periods" decoration-danger="overdue_count > 0" decoration-success="state == 'closed'">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="close_deadline"/>
+                <field name="progress_percent" widget="progressbar"/>
+                <field name="task_count"/>
+                <field name="completed_count"/>
+                <field name="overdue_count"/>
+                <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'closed'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_month_end_period_form" model="ir.ui.view">
+        <field name="name">ipai.month.end.period.form</field>
+        <field name="model">ipai.month.end.period</field>
+        <field name="arch" type="xml">
+            <form string="Month-End Period">
+                <header>
+                    <button name="action_start_close" type="object" string="Start Close" class="btn-primary" invisible="state != 'pending'"/>
+                    <button name="action_submit_review" type="object" string="Submit for Review" class="btn-primary" invisible="state != 'in_progress'"/>
+                    <button name="action_close_period" type="object" string="Close Period" class="btn-primary" invisible="state != 'review'" groups="ipai_month_end.group_month_end_manager"/>
+                    <button name="action_cancel" type="object" string="Cancel" invisible="state in ('closed', 'cancelled')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,pending,in_progress,review,closed"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" type="object" name="action_view_tasks" icon="fa-tasks" invisible="task_count == 0">
+                            <field string="Tasks" name="task_count" widget="statinfo"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Period Name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Period Information">
+                            <field name="code"/>
+                            <field name="date_start"/>
+                            <field name="date_end"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Close Process">
+                            <field name="close_start_date"/>
+                            <field name="close_deadline"/>
+                            <field name="checklist_id"/>
+                        </group>
+                    </group>
+                    <group string="Progress">
+                        <group>
+                            <field name="progress_percent" widget="progressbar"/>
+                            <field name="completed_count"/>
+                            <field name="overdue_count"/>
+                        </group>
+                        <group>
+                            <field name="approved_by_id" readonly="1"/>
+                            <field name="approval_date" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Tasks" name="tasks">
+                            <field name="task_ids" context="{'default_period_id': active_id}">
+                                <tree decoration-danger="is_overdue" decoration-success="state == 'done'" editable="bottom">
+                                    <field name="day_number"/>
+                                    <field name="scheduled_time"/>
+                                    <field name="name"/>
+                                    <field name="task_category"/>
+                                    <field name="raci_responsible_id"/>
+                                    <field name="raci_accountable_id"/>
+                                    <field name="deadline"/>
+                                    <field name="state" widget="badge"/>
+                                    <field name="is_overdue" column_invisible="1"/>
+                                    <field name="is_mandatory"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_month_end_period_search" model="ir.ui.view">
+        <field name="name">ipai.month.end.period.search</field>
+        <field name="model">ipai.month.end.period</field>
+        <field name="arch" type="xml">
+            <search string="Search Periods">
+                <field name="name"/>
+                <field name="code"/>
+                <filter string="Draft" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="In Progress" name="in_progress" domain="[('state', '=', 'in_progress')]"/>
+                <filter string="Under Review" name="review" domain="[('state', '=', 'review')]"/>
+                <filter string="Closed" name="closed" domain="[('state', '=', 'closed')]"/>
+                <separator/>
+                <filter string="Has Overdue Tasks" name="overdue" domain="[('overdue_count', '>', 0)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Company" name="group_company" context="{'group_by': 'company_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_month_end_period" model="ir.actions.act_window">
+        <field name="name">Month-End Periods</field>
+        <field name="res_model">ipai.month.end.period</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_month_end_period_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first month-end close period
+            </p>
+            <p>
+                Track and manage your accounting period close process with tasks, approvals, and deadlines.
+            </p>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,9 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_bir_form_user,bir.form.user,model_ipai_bir_form,base.group_user,1,0,0,0
+access_bir_form_manager,bir.form.manager,model_ipai_bir_form,account.group_account_manager,1,1,1,1
+access_bir_form_line_user,bir.form.line.user,model_ipai_bir_form_line,base.group_user,1,0,0,0
+access_bir_form_line_manager,bir.form.line.manager,model_ipai_bir_form_line,account.group_account_manager,1,1,1,1
+access_bir_filing_user,bir.filing.user,model_ipai_bir_filing,account.group_account_user,1,1,1,0
+access_bir_filing_manager,bir.filing.manager,model_ipai_bir_filing,account.group_account_manager,1,1,1,1
+access_bir_schedule_user,bir.schedule.user,model_ipai_bir_filing_schedule,account.group_account_user,1,0,0,0
+access_bir_schedule_manager,bir.schedule.manager,model_ipai_bir_filing_schedule,account.group_account_manager,1,1,1,1

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Root Menu -->
+    <menuitem id="menu_month_end_root"
+              name="Month-End Close"
+              web_icon="ipai_month_end,static/description/icon.png"
+              sequence="45"/>
+
+    <!-- Main Menus -->
+    <menuitem id="menu_month_end_periods"
+              name="Close Periods"
+              parent="menu_month_end_root"
+              action="action_month_end_period"
+              sequence="10"/>
+
+    <menuitem id="menu_month_end_tasks"
+              name="My Tasks"
+              parent="menu_month_end_root"
+              action="action_month_end_task"
+              sequence="20"/>
+
+    <!-- Configuration Menu -->
+    <menuitem id="menu_month_end_config"
+              name="Configuration"
+              parent="menu_month_end_root"
+              sequence="100"
+              groups="ipai_month_end.group_month_end_manager"/>
+
+    <menuitem id="menu_month_end_checklists"
+              name="Checklist Templates"
+              parent="menu_month_end_config"
+              action="action_month_end_checklist"
+              sequence="10"/>
+</odoo>

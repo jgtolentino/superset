@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Standard Month-End Close Checklist Template -->
+        <record id="checklist_standard_month_end" model="ipai.month.end.checklist">
+            <field name="name">Standard Month-End Close (TBWA)</field>
+            <field name="description">Standard 10-day month-end close process for TBWA Philippines</field>
+        </record>
+
+        <!-- Day 1 Tasks -->
+        <record id="task_template_payroll_start" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Payroll processing begins</field>
+            <field name="day_offset">0</field>
+            <field name="scheduled_time">08:00</field>
+            <field name="task_category">payroll</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="task_template_email_reminder" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Send email reminder to all stakeholders</field>
+            <field name="day_offset">0</field>
+            <field name="scheduled_time">10:00</field>
+            <field name="task_category">other</field>
+            <field name="is_mandatory">False</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="task_template_vat_compile" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">VAT data compilation</field>
+            <field name="day_offset">0</field>
+            <field name="scheduled_time">14:00</field>
+            <field name="task_category">vat</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <record id="task_template_dashboard_update" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Status dashboard updated</field>
+            <field name="day_offset">0</field>
+            <field name="scheduled_time">16:00</field>
+            <field name="task_category">reporting</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <!-- Day 2 Tasks -->
+        <record id="task_template_rent_leases" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Rent &amp; leases recording</field>
+            <field name="day_offset">1</field>
+            <field name="scheduled_time">09:00</field>
+            <field name="task_category">accruals</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="task_template_accruals_entry" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Accruals entry</field>
+            <field name="day_offset">1</field>
+            <field name="scheduled_time">11:00</field>
+            <field name="task_category">accruals</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="task_template_ca_liquidations" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">CA liquidations begin</field>
+            <field name="day_offset">1</field>
+            <field name="scheduled_time">14:00</field>
+            <field name="task_category">liquidations</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <!-- Day 3 Tasks -->
+        <record id="task_template_client_accruals" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Client accruals</field>
+            <field name="day_offset">2</field>
+            <field name="scheduled_time">08:00</field>
+            <field name="task_category">accruals</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="task_template_payroll_review" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Payroll task review</field>
+            <field name="day_offset">2</field>
+            <field name="scheduled_time">10:00</field>
+            <field name="task_category">payroll</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="task_template_payroll_approved" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Payroll approved</field>
+            <field name="day_offset">2</field>
+            <field name="scheduled_time">12:00</field>
+            <field name="task_category">payroll</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <record id="task_template_wip_management" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">WIP management</field>
+            <field name="day_offset">2</field>
+            <field name="scheduled_time">14:00</field>
+            <field name="task_category">wip</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <!-- Day 4 Tasks -->
+        <record id="task_template_treasury_fx" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Treasury &amp; FX revaluation</field>
+            <field name="day_offset">3</field>
+            <field name="scheduled_time">08:00</field>
+            <field name="task_category">treasury</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="task_template_vat_review" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">VAT data review</field>
+            <field name="day_offset">3</field>
+            <field name="scheduled_time">10:00</field>
+            <field name="task_category">vat</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="task_template_amortizations" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Amortizations</field>
+            <field name="day_offset">3</field>
+            <field name="scheduled_time">12:00</field>
+            <field name="task_category">other</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <record id="task_template_ar_ap_aging" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">AR/AP aging analysis</field>
+            <field name="day_offset">3</field>
+            <field name="scheduled_time">14:00</field>
+            <field name="task_category">reconciliation</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <record id="task_template_intercompany_recon" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Intercompany reconciliation</field>
+            <field name="day_offset">3</field>
+            <field name="scheduled_time">16:00</field>
+            <field name="task_category">reconciliation</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">50</field>
+        </record>
+
+        <!-- Day 5 Tasks -->
+        <record id="task_template_regional_reporting" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Regional reporting</field>
+            <field name="day_offset">4</field>
+            <field name="scheduled_time">08:00</field>
+            <field name="task_category">reporting</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="task_template_prior_period_review" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Prior period review</field>
+            <field name="day_offset">4</field>
+            <field name="scheduled_time">10:00</field>
+            <field name="task_category">review</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="task_template_fx_treasury_adj" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">FX &amp; Treasury adjustments</field>
+            <field name="day_offset">4</field>
+            <field name="scheduled_time">12:00</field>
+            <field name="task_category">treasury</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <record id="task_template_final_reclass" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Final reclassifications</field>
+            <field name="day_offset">4</field>
+            <field name="scheduled_time">14:00</field>
+            <field name="task_category">other</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <record id="task_template_wip_oop_recon" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">WIP/OOP reconciliation</field>
+            <field name="day_offset">4</field>
+            <field name="scheduled_time">16:00</field>
+            <field name="task_category">wip</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">50</field>
+        </record>
+
+        <!-- Day 6 Tasks -->
+        <record id="task_template_final_tb_review" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Final TB review</field>
+            <field name="day_offset">5</field>
+            <field name="scheduled_time">09:00</field>
+            <field name="task_category">review</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="task_template_escalation_check" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Escalation check (auto)</field>
+            <field name="day_offset">5</field>
+            <field name="scheduled_time">11:00</field>
+            <field name="task_category">other</field>
+            <field name="is_mandatory">False</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="task_template_tb_approved" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">TB approved</field>
+            <field name="day_offset">5</field>
+            <field name="scheduled_time">13:00</field>
+            <field name="task_category">review</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <!-- Day 7 Tasks -->
+        <record id="task_template_final_signoff" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Final TB sign-off</field>
+            <field name="day_offset">6</field>
+            <field name="scheduled_time">09:00</field>
+            <field name="task_category">review</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="task_template_adj_je_posted" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">All adjusting JEs posted</field>
+            <field name="day_offset">6</field>
+            <field name="scheduled_time">10:00</field>
+            <field name="task_category">other</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="task_template_gl_closed" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">GL closed for month</field>
+            <field name="day_offset">6</field>
+            <field name="scheduled_time">11:00</field>
+            <field name="task_category">other</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <record id="task_template_payment_approval" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">Payment approval batch</field>
+            <field name="day_offset">6</field>
+            <field name="scheduled_time">14:00</field>
+            <field name="task_category">review</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <!-- Day 8-10 (BIR Filing) -->
+        <record id="task_template_bir_1601c_prepare" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">BIR 1601-C prepared</field>
+            <field name="day_offset">7</field>
+            <field name="scheduled_time">09:00</field>
+            <field name="task_category">filing</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="task_template_bir_1601c_review" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">BIR 1601-C reviewed</field>
+            <field name="day_offset">8</field>
+            <field name="scheduled_time">10:00</field>
+            <field name="task_category">filing</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="task_template_bir_1601c_approved" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">BIR 1601-C approved</field>
+            <field name="day_offset">9</field>
+            <field name="scheduled_time">09:00</field>
+            <field name="task_category">filing</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="task_template_bir_1601c_filed" model="ipai.month.end.task.template">
+            <field name="checklist_id" ref="checklist_standard_month_end"/>
+            <field name="name">BIR 1601-C filed</field>
+            <field name="day_offset">9</field>
+            <field name="scheduled_time">14:00</field>
+            <field name="task_category">filing</field>
+            <field name="is_mandatory">True</field>
+            <field name="sequence">20</field>
+        </record>
+    </data>
+</odoo>

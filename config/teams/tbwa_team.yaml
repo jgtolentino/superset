@@ -1,0 +1,241 @@
+# TBWA Philippines Finance Team Configuration
+# Month-End Close Team - 12 Users + Roles
+---
+team:
+  name: TBWA Philippines Finance
+  code: TBWA-PH-FIN
+  department: Finance & Accounting
+  company: TBWA Philippines
+
+# Team Members (12 users based on schedule assignments)
+users:
+  # Finance Leadership
+  - id: ckvc
+    name: CKVC
+    email: ckvc@tbwa.ph
+    role: Finance Controller
+    odoo_groups:
+      - account.group_account_manager
+      - ipai_month_end.group_month_end_manager
+      - ipai_approval_workflow.group_approval_manager
+      - ipai_bir_compliance.group_bir_manager
+    raci_default: accountable
+    responsibilities:
+      - Final TB sign-off
+      - Period close approval
+      - Payment batch approval
+      - Rent & leases recording approval
+      - Payroll approval
+      - BIR filing approval
+
+  - id: rim
+    name: RIM
+    email: rim@tbwa.ph
+    role: Finance Manager
+    odoo_groups:
+      - account.group_account_manager
+      - ipai_month_end.group_month_end_manager
+      - ipai_approval_workflow.group_approval_manager
+      - ipai_bir_compliance.group_bir_reviewer
+    raci_default: responsible
+    responsibilities:
+      - Payroll processing coordination
+      - VAT data review
+      - Prior period review
+      - Final reclass
+      - Final TB review
+      - TB approval
+      - BIR 1601-C review
+
+  # Senior Accountants
+  - id: jpal
+    name: JPAL
+    email: jpal@tbwa.ph
+    role: Senior Accountant - Tax & Reporting
+    odoo_groups:
+      - account.group_account_user
+      - ipai_month_end.group_month_end_accountant
+      - ipai_approval_workflow.group_approval_user
+      - ipai_bir_compliance.group_bir_user
+    raci_default: responsible
+    responsibilities:
+      - VAT data compilation
+      - Client accruals
+      - WIP management
+      - AR/AP aging analysis
+      - Intercompany reconciliation
+
+  - id: las
+    name: LAS
+    email: las@tbwa.ph
+    role: Senior Accountant - AP/Disbursements
+    odoo_groups:
+      - account.group_account_user
+      - ipai_month_end.group_month_end_accountant
+      - ipai_approval_workflow.group_approval_user
+    raci_default: responsible
+    responsibilities:
+      - CA liquidations
+      - Amortizations (support)
+      - AP aging analysis
+
+  - id: bom
+    name: BOM
+    email: bom@tbwa.ph
+    role: Senior Accountant - Tax Compliance
+    odoo_groups:
+      - account.group_account_user
+      - ipai_month_end.group_month_end_accountant
+      - ipai_bir_compliance.group_bir_user
+    raci_default: responsible
+    responsibilities:
+      - BIR 1601-C preparation
+      - BIR 2550M preparation
+      - Amortizations (lead)
+      - Tax compliance documentation
+
+  - id: ji
+    name: JI
+    email: ji@tbwa.ph
+    role: Treasury Analyst
+    odoo_groups:
+      - account.group_account_user
+      - ipai_month_end.group_month_end_accountant
+    raci_default: responsible
+    responsibilities:
+      - FX & Treasury adjustments
+      - Bank reconciliation support
+
+  - id: jpl
+    name: JPL
+    email: jpl@tbwa.ph
+    role: Senior Accountant - Project Accounting
+    odoo_groups:
+      - account.group_account_user
+      - ipai_month_end.group_month_end_accountant
+    raci_default: responsible
+    responsibilities:
+      - WIP/OOP reconciliation
+
+  # Staff Accountants
+  - id: acc_staff_1
+    name: Staff Accountant 1
+    email: acc1@tbwa.ph
+    role: Staff Accountant
+    odoo_groups:
+      - account.group_account_user
+      - ipai_month_end.group_month_end_user
+    raci_default: consulted
+    responsibilities:
+      - Data entry support
+      - Document preparation
+
+  - id: acc_staff_2
+    name: Staff Accountant 2
+    email: acc2@tbwa.ph
+    role: Staff Accountant
+    odoo_groups:
+      - account.group_account_user
+      - ipai_month_end.group_month_end_user
+    raci_default: consulted
+    responsibilities:
+      - Data entry support
+      - Filing support
+
+  - id: acc_staff_3
+    name: Staff Accountant 3
+    email: acc3@tbwa.ph
+    role: Staff Accountant
+    odoo_groups:
+      - account.group_account_user
+      - ipai_month_end.group_month_end_user
+    raci_default: consulted
+    responsibilities:
+      - Reconciliation support
+      - Report preparation
+
+  # Admin/Support
+  - id: fin_admin
+    name: Finance Admin
+    email: fin.admin@tbwa.ph
+    role: Finance Administrator
+    odoo_groups:
+      - base.group_user
+      - ipai_month_end.group_month_end_user
+    raci_default: informed
+    responsibilities:
+      - Schedule coordination
+      - Meeting setup
+      - Document management
+
+  - id: regional_rep
+    name: Regional Representative
+    email: regional@tbwa.ph
+    role: Regional Finance Contact
+    odoo_groups:
+      - base.group_user
+      - ipai_month_end.group_month_end_user
+    raci_default: informed
+    responsibilities:
+      - Regional reporting coordination
+      - Intercompany liaison
+
+# Role Hierarchy
+role_hierarchy:
+  - level: 1
+    role: Finance Controller
+    users: [ckvc]
+    can_approve: all
+
+  - level: 2
+    role: Finance Manager
+    users: [rim]
+    can_approve: [jpal, las, bom, ji, jpl]
+
+  - level: 3
+    role: Senior Accountant
+    users: [jpal, las, bom, ji, jpl]
+    can_approve: []
+
+  - level: 4
+    role: Staff Accountant
+    users: [acc_staff_1, acc_staff_2, acc_staff_3]
+    can_approve: []
+
+  - level: 5
+    role: Support
+    users: [fin_admin, regional_rep]
+    can_approve: []
+
+# Escalation Matrix
+escalation:
+  default_timeout_hours: 4
+  levels:
+    - level: 1
+      notify: [rim]
+      after_hours: 4
+    - level: 2
+      notify: [ckvc]
+      after_hours: 8
+    - level: 3
+      notify: [ckvc, regional_rep]
+      after_hours: 24
+      action: critical_alert
+
+# Notification Settings
+notifications:
+  task_assignment:
+    channels: [email, odoo_activity]
+    immediate: true
+  task_due_reminder:
+    channels: [email]
+    before_hours: [24, 4, 1]
+  task_overdue:
+    channels: [email, odoo_activity]
+    escalate: true
+  approval_required:
+    channels: [email, odoo_activity]
+    immediate: true
+  period_status_change:
+    channels: [email]
+    recipients: all_team
