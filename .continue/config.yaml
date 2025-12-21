@@ -1,0 +1,131 @@
+# Continue Configuration for Smart Delta Engine
+# Docs-aware AI coding assistant for Odoo CE/OCA development
+
+name: smart-delta-engine
+version: 1.0.0
+schema: v1
+
+# Models Configuration
+models:
+  - name: claude-sonnet
+    provider: anthropic
+    model: claude-sonnet-4-20250514
+    title: "Claude Sonnet (Default)"
+  - name: claude-opus
+    provider: anthropic
+    model: claude-opus-4-20250514
+    title: "Claude Opus (Complex Tasks)"
+
+# Rules - loaded from .continue/rules/
+rules:
+  - path: .continue/rules/odoo-first.md
+    globs: ["**/*.py", "**/*.xml"]
+  - path: .continue/rules/migrations-source-of-truth.md
+    globs: ["**/migrations/**", "**/models/**"]
+  - path: .continue/rules/rls-required.md
+    globs: ["**/security/**", "**/models/**"]
+  - path: .continue/rules/ci-gates.md
+    globs: [".github/**", "**/__manifest__.py"]
+  - path: .continue/rules/no-controllers.md
+    globs: ["**/controllers/**"]
+
+# Documentation Indexing
+docs:
+  - name: "Odoo 18 Docs"
+    url: "https://www.odoo.com/documentation/18.0/"
+    depth: 3
+  - name: "OCA Guidelines"
+    url: "https://github.com/OCA/odoo-community.org/blob/master/website/Ede/Contribute/guidelines.md"
+  - name: "Smart Delta Parity Map"
+    path: "spec/smart-delta-engine/catalog/parity-map.json"
+
+# MCP Servers
+mcpServers:
+  # File system access
+  - name: filesystem
+    command: npx
+    args: ["-y", "@anthropic/mcp-filesystem"]
+    env:
+      ALLOWED_PATHS: "${workspaceFolder}"
+
+  # GitHub integration
+  - name: github
+    command: npx
+    args: ["-y", "@anthropic/mcp-github"]
+    env:
+      GITHUB_TOKEN: "${env:GITHUB_TOKEN}"
+
+# Context Providers
+context:
+  - name: codebase
+    params:
+      nRetrieve: 25
+  - name: docs
+  - name: terminal
+
+# Slash Commands
+slashCommands:
+  - name: catalog
+    description: "Refresh and query the docs catalog"
+    prompt: |
+      Query the Smart Delta catalog at spec/smart-delta-engine/catalog/.
+      Search for capabilities matching the user's query.
+      Return: capability_id, gap_level, smart_delta choice, and implementation_notes.
+
+  - name: parity
+    description: "Check parity mapping for a capability"
+    prompt: |
+      Look up the parity map at spec/smart-delta-engine/catalog/parity-map.json.
+      Find the enterprise capability and show:
+      - Odoo core modules that provide parity
+      - OCA modules to install
+      - Gap level and Smart Delta choice
+      - Implementation notes
+
+  - name: oca
+    description: "Find OCA module for a capability"
+    prompt: |
+      Search OCA repositories for modules matching the capability.
+      Check the parity map first, then search GitHub OCA org if needed.
+      Return: repo name, module name, installation instructions.
+
+  - name: spec
+    description: "Generate Spec Kit bundle for a feature"
+    prompt: |
+      Generate a Spec Kit bundle with:
+      - constitution.md (principles)
+      - prd.md (requirements)
+      - plan.md (architecture)
+      - tasks.md (execution checklist)
+      Follow the Smart Delta hierarchy.
+
+  - name: delta
+    description: "Analyze Smart Delta for a requirement"
+    prompt: |
+      Analyze the requirement using Smart Delta rules:
+      1. Can Config do it? → gap_level 0
+      2. Does OCA have it? → gap_level 1
+      3. Minimal custom needed? → gap_level 2
+      4. External service required? → gap_level 3
+      Recommend the lowest gap_level solution.
+
+# Tool Policies
+toolPolicies:
+  # Auto-allow read operations
+  - tool: read_file
+    policy: allow
+  - tool: list_files
+    policy: allow
+  - tool: search
+    policy: allow
+
+  # Require confirmation for writes
+  - tool: write_file
+    policy: ask
+  - tool: run_command
+    policy: ask
+
+# Data (for caching and state)
+data:
+  catalogPath: "spec/smart-delta-engine/catalog"
+  parityMapPath: "spec/smart-delta-engine/catalog/parity-map.json"

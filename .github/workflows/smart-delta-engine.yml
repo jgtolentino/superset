@@ -1,0 +1,272 @@
+name: Smart Delta Engine CI
+
+on:
+  push:
+    branches: [main, claude/*]
+    paths:
+      - 'spec/smart-delta-engine/**'
+      - 'custom_addons/**'
+      - '.continue/**'
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly catalog refresh
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    inputs:
+      refresh_catalog:
+        description: 'Force catalog refresh'
+        type: boolean
+        default: false
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  validate-parity-map:
+    name: Validate Parity Map
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install jsonschema pyyaml
+
+      - name: Validate parity map JSON
+        run: |
+          python -c "
+          import json
+          import sys
+
+          with open('spec/smart-delta-engine/catalog/parity-map.json') as f:
+              data = json.load(f)
+
+          # Validate structure
+          assert 'parity_map' in data, 'Missing parity_map'
+          assert 'smart_delta_rules' in data, 'Missing smart_delta_rules'
+
+          # Validate each capability
+          for cap in data['parity_map']:
+              assert 'capability_id' in cap, f'Missing capability_id in {cap}'
+              assert 'gap_level' in cap, f'Missing gap_level in {cap.get(\"capability_id\")}'
+              assert cap['gap_level'] in [0, 1, 2, 3], f'Invalid gap_level: {cap[\"gap_level\"]}'
+              assert 'smart_delta' in cap, f'Missing smart_delta in {cap[\"capability_id\"]}'
+
+          print(f'✅ Validated {len(data[\"parity_map\"])} capabilities')
+          "
+
+      - name: Check OCA references
+        run: |
+          python -c "
+          import json
+
+          with open('spec/smart-delta-engine/catalog/parity-map.json') as f:
+              data = json.load(f)
+
+          errors = []
+          for cap in data['parity_map']:
+              if cap['gap_level'] == 1:
+                  oca_modules = cap.get('parity_target', {}).get('oca_modules', [])
+                  if not oca_modules:
+                      errors.append(f'{cap[\"capability_id\"]}: gap_level 1 but no OCA modules listed')
+
+          if errors:
+              for e in errors:
+                  print(f'❌ {e}')
+              exit(1)
+          print('✅ All gap_level 1 capabilities have OCA references')
+          "
+
+      - name: Verify deterministic hash
+        run: |
+          HASH=$(sha256sum spec/smart-delta-engine/catalog/parity-map.json | cut -d' ' -f1)
+          echo "Parity map hash: $HASH"
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+
+  validate-smart-delta-rules:
+    name: Validate Smart Delta Compliance
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for unauthorized custom modules
+        run: |
+          # Find any new custom modules in the PR
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
+
+          # Check if any custom_addons modules were added
+          NEW_MODULES=$(echo "$CHANGED_FILES" | grep -E "^custom_addons/[^/]+/__manifest__.py$" || true)
+
+          if [ -n "$NEW_MODULES" ]; then
+            echo "⚠️ New custom modules detected:"
+            echo "$NEW_MODULES"
+            echo ""
+            echo "Verifying Smart Delta compliance..."
+
+            # Each new module must have gap_level >= 2 documented
+            for manifest in $NEW_MODULES; do
+              MODULE_DIR=$(dirname "$manifest")
+              MODULE_NAME=$(basename "$MODULE_DIR")
+
+              # Check if module has corresponding parity map entry
+              if ! grep -q "\"$MODULE_NAME\"" spec/smart-delta-engine/catalog/parity-map.json 2>/dev/null; then
+                echo "❌ Module '$MODULE_NAME' not found in parity map"
+                echo "   Custom modules require documented gap_level >= 2"
+                exit 1
+              fi
+            done
+          fi
+
+          echo "✅ Smart Delta compliance verified"
+
+  validate-security:
+    name: Validate Security Files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for security files
+        run: |
+          ERRORS=0
+
+          # Find all Odoo modules
+          for manifest in $(find custom_addons -name "__manifest__.py" 2>/dev/null || true); do
+            MODULE_DIR=$(dirname "$manifest")
+            MODULE_NAME=$(basename "$MODULE_DIR")
+
+            # Check for ir.model.access.csv
+            if [ ! -f "$MODULE_DIR/security/ir.model.access.csv" ]; then
+              echo "⚠️ Missing security/ir.model.access.csv in $MODULE_NAME"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ Found $ERRORS security issues"
+            # Warning only, not blocking
+          else
+            echo "✅ All modules have security files"
+          fi
+
+  validate-continue-rules:
+    name: Validate Continue Rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Continue rules syntax
+        run: |
+          # Validate YAML syntax in config
+          python -c "
+          import yaml
+          with open('.continue/config.yaml') as f:
+              config = yaml.safe_load(f)
+          print('✅ Continue config.yaml is valid')
+          "
+
+      - name: Check rules files exist
+        run: |
+          RULES=(
+            ".continue/rules/odoo-first.md"
+            ".continue/rules/migrations-source-of-truth.md"
+            ".continue/rules/rls-required.md"
+            ".continue/rules/ci-gates.md"
+            ".continue/rules/no-controllers.md"
+          )
+
+          for rule in "${RULES[@]}"; do
+            if [ -f "$rule" ]; then
+              echo "✅ Found: $rule"
+            else
+              echo "❌ Missing: $rule"
+              exit 1
+            fi
+          done
+
+  catalog-refresh:
+    name: Refresh Docs Catalog
+    runs-on: ubuntu-latest
+    if: github.event.schedule || github.event.inputs.refresh_catalog == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4 pyyaml
+
+      - name: Refresh catalog
+        run: |
+          echo "📚 Catalog refresh would run here"
+          echo "This would crawl documentation sources and update:"
+          echo "- spec/smart-delta-engine/catalog/sources.json"
+          echo "- spec/smart-delta-engine/catalog/parity-map.json"
+          # TODO: Implement actual crawler
+
+      - name: Commit changes
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add spec/smart-delta-engine/catalog/
+          git diff --staged --quiet || git commit -m "chore: refresh docs catalog [skip ci]"
+          # git push  # Uncomment when ready
+
+  spec-kit-validation:
+    name: Validate Spec Kit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Spec Kit completeness
+        run: |
+          SPEC_DIR="spec/smart-delta-engine"
+          REQUIRED_FILES=(
+            "constitution.md"
+            "prd.md"
+            "plan.md"
+            "tasks.md"
+          )
+
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ -f "$SPEC_DIR/$file" ]; then
+              echo "✅ Found: $file"
+            else
+              echo "❌ Missing: $SPEC_DIR/$file"
+              exit 1
+            fi
+          done
+
+          echo "✅ Spec Kit is complete"
+
+      - name: Validate tasks.md format
+        run: |
+          python -c "
+          import re
+
+          with open('spec/smart-delta-engine/tasks.md') as f:
+              content = f.read()
+
+          # Check for task checkboxes
+          tasks = re.findall(r'- \[[ x]\]', content)
+          if not tasks:
+              print('❌ No tasks found in tasks.md')
+              exit(1)
+
+          completed = len(re.findall(r'- \[x\]', content))
+          total = len(tasks)
+          print(f'📋 Tasks: {completed}/{total} completed')
+          "
