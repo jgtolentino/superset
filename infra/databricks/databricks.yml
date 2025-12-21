@@ -1,0 +1,317 @@
+# Databricks Asset Bundle for Notion Finance PPM Control Room
+# Deploy with: databricks bundle deploy -t <target>
+
+bundle:
+  name: notion-finance-ppm
+
+variables:
+  catalog:
+    description: "Unity Catalog name"
+    default: main
+  warehouse_id:
+    description: "SQL Warehouse ID for queries"
+  notification_email:
+    description: "Email for job failure notifications"
+    default: ""
+
+workspace:
+  host: ${DATABRICKS_HOST}
+
+# Artifact paths for notebooks
+artifacts:
+  default:
+    type: whl
+    path: .
+
+include:
+  - resources/*.yml
+
+# Environment targets
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      root_path: /Users/${workspace.current_user.userName}/.bundle/${bundle.name}/dev
+    variables:
+      catalog: dev_catalog
+
+  staging:
+    mode: development
+    workspace:
+      root_path: /Shared/.bundle/${bundle.name}/staging
+    variables:
+      catalog: staging_catalog
+
+  prod:
+    mode: production
+    workspace:
+      root_path: /Shared/.bundle/${bundle.name}/prod
+    variables:
+      catalog: main
+    run_as:
+      service_principal_name: ppm-service-principal
+
+# Resources defined inline (also can be in resources/*.yml)
+resources:
+  schemas:
+    bronze:
+      catalog_name: ${var.catalog}
+      name: bronze
+      comment: "Raw ingestion layer for Notion and Azure data"
+
+    silver:
+      catalog_name: ${var.catalog}
+      name: silver
+      comment: "Normalized and cleaned data layer"
+
+    gold:
+      catalog_name: ${var.catalog}
+      name: gold
+      comment: "Curated marts and KPIs for consumption"
+
+  jobs:
+    # Notion Sync to Bronze
+    notion_sync_bronze:
+      name: "[PPM] Notion Sync Bronze"
+      description: "Pull Notion data to bronze.notion_raw_pages"
+      schedule:
+        quartz_cron_expression: "0 */5 * * * ?"
+        timezone_id: UTC
+        pause_status: UNPAUSED
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: sync
+          notebook_task:
+            notebook_path: ./notebooks/bronze/notion_sync_bronze.py
+            base_parameters:
+              catalog: ${var.catalog}
+          job_cluster_key: small_cluster
+
+      job_clusters:
+        - job_cluster_key: small_cluster
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_DS3_v2
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*]"
+              spark.databricks.delta.preview.enabled: "true"
+            azure_attributes:
+              availability: ON_DEMAND_AZURE
+
+    # Bronze to Silver Transformation
+    notion_transform_silver:
+      name: "[PPM] Transform Silver"
+      description: "Normalize bronze data to silver layer"
+      schedule:
+        quartz_cron_expression: "0 */10 * * * ?"
+        timezone_id: UTC
+        pause_status: UNPAUSED
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: transform_programs
+          notebook_task:
+            notebook_path: ./notebooks/silver/transform_programs.py
+            base_parameters:
+              catalog: ${var.catalog}
+          job_cluster_key: small_cluster
+
+        - task_key: transform_projects
+          depends_on:
+            - task_key: transform_programs
+          notebook_task:
+            notebook_path: ./notebooks/silver/transform_projects.py
+            base_parameters:
+              catalog: ${var.catalog}
+          job_cluster_key: small_cluster
+
+        - task_key: transform_budget_lines
+          depends_on:
+            - task_key: transform_projects
+          notebook_task:
+            notebook_path: ./notebooks/silver/transform_budget_lines.py
+            base_parameters:
+              catalog: ${var.catalog}
+          job_cluster_key: small_cluster
+
+        - task_key: transform_risks
+          depends_on:
+            - task_key: transform_projects
+          notebook_task:
+            notebook_path: ./notebooks/silver/transform_risks.py
+            base_parameters:
+              catalog: ${var.catalog}
+          job_cluster_key: small_cluster
+
+        - task_key: transform_actions
+          depends_on:
+            - task_key: transform_projects
+          notebook_task:
+            notebook_path: ./notebooks/silver/transform_actions.py
+            base_parameters:
+              catalog: ${var.catalog}
+          job_cluster_key: small_cluster
+
+      job_clusters:
+        - job_cluster_key: small_cluster
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_DS3_v2
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*]"
+              spark.databricks.delta.preview.enabled: "true"
+
+    # Silver to Gold - PPM Marts
+    ppm_marts_gold:
+      name: "[PPM] Compute Gold Marts"
+      description: "Compute KPIs and marts in gold layer"
+      schedule:
+        quartz_cron_expression: "0 0 * * * ?"
+        timezone_id: UTC
+        pause_status: UNPAUSED
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: budget_vs_actual
+          notebook_task:
+            notebook_path: ./notebooks/gold/budget_vs_actual.py
+            base_parameters:
+              catalog: ${var.catalog}
+          job_cluster_key: medium_cluster
+
+        - task_key: project_health
+          depends_on:
+            - task_key: budget_vs_actual
+          notebook_task:
+            notebook_path: ./notebooks/gold/project_health.py
+            base_parameters:
+              catalog: ${var.catalog}
+          job_cluster_key: medium_cluster
+
+        - task_key: forecast
+          depends_on:
+            - task_key: budget_vs_actual
+          notebook_task:
+            notebook_path: ./notebooks/gold/forecast.py
+            base_parameters:
+              catalog: ${var.catalog}
+          job_cluster_key: medium_cluster
+
+      job_clusters:
+        - job_cluster_key: medium_cluster
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_DS4_v2
+            num_workers: 1
+            spark_conf:
+              spark.databricks.delta.preview.enabled: "true"
+
+    # Azure Resource Graph Ingestion
+    azure_rg_ingest_bronze:
+      name: "[PPM] Azure Resource Graph Ingest"
+      description: "Ingest Azure resources and Advisor recommendations"
+      schedule:
+        quartz_cron_expression: "0 0 6 * * ?"
+        timezone_id: UTC
+        pause_status: UNPAUSED
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: ingest
+          notebook_task:
+            notebook_path: ./notebooks/bronze/azure_rg_ingest.py
+            base_parameters:
+              catalog: ${var.catalog}
+          job_cluster_key: small_cluster
+
+      job_clusters:
+        - job_cluster_key: small_cluster
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_DS3_v2
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*]"
+
+    # Azure Advisor Transform
+    azure_advisor_transform:
+      name: "[PPM] Azure Advisor Transform"
+      description: "Transform Advisor data to silver and gold"
+      schedule:
+        quartz_cron_expression: "0 30 6 * * ?"
+        timezone_id: UTC
+        pause_status: UNPAUSED
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: transform_silver
+          notebook_task:
+            notebook_path: ./notebooks/silver/transform_advisor.py
+            base_parameters:
+              catalog: ${var.catalog}
+          job_cluster_key: small_cluster
+
+        - task_key: compute_gold
+          depends_on:
+            - task_key: transform_silver
+          notebook_task:
+            notebook_path: ./notebooks/gold/advisor_summary.py
+            base_parameters:
+              catalog: ${var.catalog}
+          job_cluster_key: small_cluster
+
+      job_clusters:
+        - job_cluster_key: small_cluster
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_DS3_v2
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*]"
+
+    # Control Room Status Refresh
+    control_room_status_refresh:
+      name: "[PPM] Control Room Status"
+      description: "Refresh job status and data quality metrics"
+      schedule:
+        quartz_cron_expression: "0 */15 * * * ?"
+        timezone_id: UTC
+        pause_status: UNPAUSED
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: job_status
+          notebook_task:
+            notebook_path: ./notebooks/gold/control_room_status.py
+            base_parameters:
+              catalog: ${var.catalog}
+          job_cluster_key: small_cluster
+
+        - task_key: data_quality
+          notebook_task:
+            notebook_path: ./notebooks/gold/data_quality_checks.py
+            base_parameters:
+              catalog: ${var.catalog}
+          job_cluster_key: small_cluster
+
+      job_clusters:
+        - job_cluster_key: small_cluster
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_DS3_v2
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*]"

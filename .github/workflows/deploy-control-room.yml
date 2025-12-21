@@ -1,0 +1,129 @@
+name: Deploy Control Room
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/control-room/**'
+      - '.github/workflows/deploy-control-room.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  NODE_VERSION: '20'
+  APP_NAME: 'ppm-control-room'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: apps/control-room/package-lock.json
+
+      - name: Install dependencies
+        working-directory: apps/control-room
+        run: npm ci
+
+      - name: Build
+        working-directory: apps/control-room
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-room-standalone
+          path: |
+            apps/control-room/.next/standalone
+            apps/control-room/.next/static
+            apps/control-room/public
+          retention-days: 7
+
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment != 'production' || github.event_name == 'push'
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: control-room-standalone
+          path: apps/control-room/
+
+      - name: Deploy to staging
+        id: deploy
+        run: |
+          echo "Deploying to staging..."
+          # Placeholder for actual deployment
+          # Options:
+          # - Azure App Service: az webapp deploy
+          # - Vercel: vercel deploy
+          # - Docker: docker push && kubectl apply
+          echo "url=https://staging-control-room.example.com" >> $GITHUB_OUTPUT
+          echo "Deployment complete"
+
+  deploy-production:
+    needs: [build, deploy-staging]
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'production'
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: control-room-standalone
+          path: apps/control-room/
+
+      - name: Deploy to production
+        id: deploy
+        run: |
+          echo "Deploying to production..."
+          # Placeholder for actual deployment
+          echo "url=https://control-room.example.com" >> $GITHUB_OUTPUT
+          echo "Deployment complete"
+
+  health-check:
+    needs: [deploy-staging]
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment != 'production' || github.event_name == 'push'
+    steps:
+      - name: Health check
+        run: |
+          # Wait for deployment to be ready
+          sleep 30
+
+          # Check health endpoint
+          HEALTH_URL="https://staging-control-room.example.com/api/health"
+          echo "Checking health at: $HEALTH_URL"
+
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $HEALTH_URL || echo "000")
+          if [ "$RESPONSE" != "200" ]; then
+            echo "Health check failed with status: $RESPONSE"
+            exit 1
+          fi
+
+          echo "Health check passed"

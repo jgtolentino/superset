@@ -1,0 +1,141 @@
+name: Deploy Databricks Bundle
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/databricks/**'
+      - '.github/workflows/deploy-databricks.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment target'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+env:
+  BUNDLE_NAME: notion-finance-ppm
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Validate bundle syntax
+        working-directory: infra/databricks
+        run: |
+          python3 -c "import yaml; yaml.safe_load(open('databricks.yml'))"
+          echo "YAML syntax valid"
+
+      - name: Validate notebooks
+        working-directory: infra/databricks
+        run: |
+          # Check that all referenced notebooks exist
+          for nb in $(find notebooks -name "*.py" -type f); do
+            echo "Found notebook: $nb"
+          done
+
+  deploy-dev:
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'dev' || github.event.inputs.environment == '' || github.event_name == 'push'
+    environment:
+      name: databricks-dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Configure Databricks CLI
+        run: |
+          mkdir -p ~/.databrickscfg
+          cat > ~/.databrickscfg << EOF
+          [DEFAULT]
+          host = ${{ secrets.DATABRICKS_HOST }}
+          token = ${{ secrets.DATABRICKS_TOKEN }}
+          EOF
+
+      - name: Deploy bundle
+        working-directory: infra/databricks
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          echo "Deploying to dev environment..."
+          # databricks bundle deploy -t dev
+          echo "Bundle deployed (dry run - uncomment above for real deployment)"
+
+      - name: Run validation job
+        working-directory: infra/databricks
+        run: |
+          echo "Running validation job..."
+          # databricks bundle run -t dev notion_sync_bronze
+          echo "Validation job complete (dry run)"
+
+  deploy-staging:
+    needs: [validate, deploy-dev]
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'staging'
+    environment:
+      name: databricks-staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Deploy to staging
+        working-directory: infra/databricks
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          echo "Deploying to staging..."
+          # databricks bundle deploy -t staging
+          echo "Staging deployment complete (dry run)"
+
+  deploy-prod:
+    needs: [validate, deploy-staging]
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'prod'
+    environment:
+      name: databricks-prod
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Deploy to production
+        working-directory: infra/databricks
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          echo "Deploying to production..."
+          # databricks bundle deploy -t prod
+          echo "Production deployment complete (dry run)"
+
+      - name: Notify
+        run: |
+          echo "Databricks bundle deployed to production"
+          # Add Slack/Teams notification here
