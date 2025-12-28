@@ -160,12 +160,13 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install preset-cli
+      - name: Install CLIs
         run: |
-          pip install -U setuptools wheel
-          pip install preset-cli
-          echo "✅ preset-cli installed"
-          preset-cli --version || echo "Version check not available"
+          pip install -U pip setuptools wheel
+          pip install superset-cli preset-cli
+          echo "✅ CLIs installed"
+          superset-cli --help >/dev/null 2>&1 || echo "superset-cli help not available"
+          preset-cli --version 2>/dev/null || echo "preset-cli version not available"
 
       - name: Set target URL
         id: target

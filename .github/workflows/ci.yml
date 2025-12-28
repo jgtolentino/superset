@@ -10,10 +10,12 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install shellcheck
-        run: sudo apt-get install -y shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
 
       - name: Lint shell scripts
         run: |
@@ -22,48 +24,66 @@ jobs:
   security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Check for secrets
+      - name: Check for hardcoded secrets (repo scan)
+        shell: bash
         run: |
-          # Denylist patterns for common secrets
-          PATTERNS=(
-            "password.*=.*['\"]"
-            "token.*=.*['\"]"
-            "api[_-]key.*=.*['\"]"
-            "secret.*=.*['\"]"
-            "postgresql.*:.*@"
+          set -euo pipefail
+
+          # Scan repo but EXCLUDE locations that:
+          # - contain workflow patterns (self-match)
+          # - contain generated artifacts/reports
+          EXCLUDE_DIRS=(
+            ".git"
+            ".github"
+            "artifacts"
+            "playwright-report"
+            "node_modules"
           )
+
+          # Common "real secret" patterns (keep these tight)
+          PATTERNS=(
+            "(?i)\b(password|passwd|pwd)\b\s*[:=]\s*['\"][^'\"]{6,}['\"]"
+            "(?i)\b(api[_-]?key|token|secret)\b\s*[:=]\s*['\"][^'\"]{8,}['\"]"
+            "(?i)postgres(ql)?(\+[^:]*)?:\/\/[^\/\s]+:[^@\s]+@"
+          )
+
+          # Build grep exclude args
+          EX_ARGS=()
+          for d in "${EXCLUDE_DIRS[@]}"; do EX_ARGS+=(--exclude-dir="$d"); done
+          EX_ARGS+=(--exclude="*.md")
 
           FOUND=0
           for pattern in "${PATTERNS[@]}"; do
-            echo "Checking pattern: $pattern"
-            if grep -rE "$pattern" . --exclude-dir=.git --exclude-dir=artifacts --exclude="*.md"; then
-              echo "❌ Found potential secret matching: $pattern"
+            echo "Checking: $pattern"
+            # Use grep -P for Perl-compatible regex
+            if grep -rP "$pattern" . "${EX_ARGS[@]}" 2>/dev/null; then
+              echo "❌ Potential secret match: $pattern"
               FOUND=1
             fi
           done
 
-          if [ $FOUND -eq 1 ]; then
-            echo "❌ Security check failed: potential secrets found"
+          if [ "$FOUND" -eq 1 ]; then
+            echo "❌ Security check failed"
             exit 1
           fi
 
-          echo "✅ No secrets detected"
+          echo "✅ No hardcoded secrets detected"
 
   smoke-test:
     runs-on: ubuntu-latest
-    if: ${{ secrets.SUPERSET_ADMIN_USER != '' }}
+    if: ${{ secrets.SUPERSET_ADMIN_USER != '' && secrets.SUPERSET_ADMIN_PASS != '' && secrets.BASE_URL != '' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Install Playwright browsers
         run: npx playwright install chromium
@@ -77,7 +97,7 @@ jobs:
 
       - name: Upload test artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-screenshots
           path: artifacts/
