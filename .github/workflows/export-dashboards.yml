@@ -26,11 +26,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install preset-cli
+      - name: Install dependencies
         run: |
-          pip install -U setuptools wheel
-          pip install preset-cli
-          echo "✅ preset-cli installed"
+          pip install -U requests pyyaml
+          echo "✅ Dependencies installed"
 
       - name: Export dashboards from Superset
         env:
@@ -42,18 +41,99 @@ jobs:
 
           # Clean existing assets
           rm -rf superset_assets
-          mkdir -p superset_assets
+          mkdir -p superset_assets/dashboards superset_assets/charts superset_assets/datasets superset_assets/databases
 
-          # Export using superset-cli (self-hosted Superset)
-          superset-cli "$BASE_URL" export-assets ./superset_assets \
-            --username "$SUPERSET_ADMIN_USER" \
-            --password "$SUPERSET_ADMIN_PASS"
+          # Export using Superset REST API
+          python3 << 'EOF'
+          import os
+          import json
+          import requests
+          import zipfile
+          import io
+          import yaml
+
+          base_url = os.environ.get('BASE_URL', '').rstrip('/')
+          username = os.environ.get('SUPERSET_ADMIN_USER')
+          password = os.environ.get('SUPERSET_ADMIN_PASS')
+
+          if not all([base_url, username, password]):
+              print("❌ Missing required environment variables")
+              exit(1)
+
+          # Get CSRF token and login
+          session = requests.Session()
+
+          # Login to get access token
+          login_url = f"{base_url}/api/v1/security/login"
+          login_data = {
+              "username": username,
+              "password": password,
+              "provider": "db"
+          }
+          resp = session.post(login_url, json=login_data)
+          if resp.status_code != 200:
+              print(f"❌ Login failed: {resp.status_code}")
+              print(resp.text)
+              exit(1)
+
+          access_token = resp.json().get('access_token')
+          headers = {"Authorization": f"Bearer {access_token}"}
+
+          # Get CSRF token
+          csrf_resp = session.get(f"{base_url}/api/v1/security/csrf_token/", headers=headers)
+          if csrf_resp.status_code == 200:
+              csrf_token = csrf_resp.json().get('result')
+              headers["X-CSRFToken"] = csrf_token
+
+          # Export dashboards
+          print("Fetching dashboards...")
+          dashboards_resp = session.get(f"{base_url}/api/v1/dashboard/", headers=headers)
+          if dashboards_resp.status_code == 200:
+              dashboards = dashboards_resp.json().get('result', [])
+              print(f"Found {len(dashboards)} dashboards")
+
+              for dash in dashboards:
+                  dash_id = dash['id']
+                  dash_slug = dash.get('slug') or f"dashboard_{dash_id}"
+
+                  # Export individual dashboard
+                  export_resp = session.get(
+                      f"{base_url}/api/v1/dashboard/export/",
+                      headers=headers,
+                      params={"q": json.dumps([dash_id])}
+                  )
+
+                  if export_resp.status_code == 200:
+                      # Save the zip content and extract
+                      try:
+                          with zipfile.ZipFile(io.BytesIO(export_resp.content)) as zf:
+                              for name in zf.namelist():
+                                  content = zf.read(name)
+                                  # Save with dashboard slug prefix
+                                  out_path = f"superset_assets/{name}"
+                                  os.makedirs(os.path.dirname(out_path), exist_ok=True)
+                                  with open(out_path, 'wb') as f:
+                                      f.write(content)
+                          print(f"  ✅ Exported: {dash_slug}")
+                      except zipfile.BadZipFile:
+                          # Not a zip, save as yaml
+                          with open(f"superset_assets/dashboards/{dash_slug}.yaml", 'w') as f:
+                              f.write(export_resp.text)
+                          print(f"  ✅ Exported: {dash_slug}")
+                  else:
+                      print(f"  ⚠️ Failed to export {dash_slug}: {export_resp.status_code}")
+          else:
+              print(f"⚠️ Could not fetch dashboards: {dashboards_resp.status_code}")
+
+          print("")
+          print("✅ Export complete")
+          EOF
 
           echo ""
           echo "Exported assets:"
-          find superset_assets -type f -name "*.yaml" | wc -l
+          find superset_assets -type f -name "*.yaml" 2>/dev/null | wc -l
           echo ""
-          tree superset_assets 2>/dev/null || find superset_assets -type f | head -30
+          tree superset_assets 2>/dev/null || find superset_assets -type f 2>/dev/null | head -30
 
       - name: Show changes
         run: |
