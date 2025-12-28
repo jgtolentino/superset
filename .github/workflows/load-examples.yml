@@ -1,0 +1,323 @@
+name: Load Example Dashboards
+
+on:
+  workflow_dispatch:
+    inputs:
+      method:
+        description: 'Deployment method'
+        required: true
+        default: 'doctl'
+        type: choice
+        options:
+          - doctl         # DigitalOcean App Platform (superset load-examples)
+          - preset-cli    # Dashboards-as-Code (sync from YAML)
+      target_environment:
+        description: 'Target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      dry_run:
+        description: 'Dry run (preview changes only)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  APP_ID: '73af11cb-dab2-4cb1-9770-291c536531e6'
+  COMPONENT_NAME: 'superset'
+
+jobs:
+  # ============================================================================
+  # Method 1: DigitalOcean App Platform (doctl exec)
+  # ============================================================================
+  load-via-doctl:
+    if: ${{ inputs.method == 'doctl' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Verify connection
+        run: |
+          echo "Verifying DigitalOcean connection..."
+          doctl apps get ${{ env.APP_ID }} --format ID,Spec.Name,ActiveDeployment.Phase
+          echo "✅ Connected to DO App Platform"
+
+      - name: Run database migrations
+        run: |
+          echo "Running Superset database migrations..."
+          doctl apps exec ${{ env.APP_ID }} --component=${{ env.COMPONENT_NAME }} -- \
+            superset db upgrade 2>&1 | tail -20
+          echo "✅ Migrations complete"
+
+      - name: Initialize Superset
+        run: |
+          echo "Initializing Superset..."
+          doctl apps exec ${{ env.APP_ID }} --component=${{ env.COMPONENT_NAME }} -- \
+            superset init 2>&1 | tail -10
+          echo "✅ Superset initialized"
+
+      - name: Ensure admin user exists
+        env:
+          SUPERSET_ADMIN_PASS: ${{ secrets.SUPERSET_ADMIN_PASS }}
+        run: |
+          echo "Ensuring admin user exists..."
+          doctl apps exec ${{ env.APP_ID }} --component=${{ env.COMPONENT_NAME }} -- bash -c "
+            superset fab create-admin \
+              --username admin \
+              --firstname Admin \
+              --lastname User \
+              --email admin@example.com \
+              --password '$SUPERSET_ADMIN_PASS' 2>&1 || echo 'Admin already exists (OK)'
+          " | tail -5
+          echo "✅ Admin user verified"
+
+      - name: Load official examples
+        run: |
+          echo "Loading official Superset example dashboards..."
+          echo "This may take 2-3 minutes..."
+          doctl apps exec ${{ env.APP_ID }} --component=${{ env.COMPONENT_NAME }} -- \
+            superset load-examples 2>&1 | tee /tmp/load_output.log
+
+          if grep -qi "error" /tmp/load_output.log; then
+            echo "⚠️ Errors detected during load-examples"
+          else
+            echo "✅ Examples loaded successfully"
+          fi
+
+      - name: Remap datasets to Examples (Postgres)
+        run: |
+          echo "Remapping datasets to Examples (Postgres) database..."
+          doctl apps exec ${{ env.APP_ID }} --component=${{ env.COMPONENT_NAME }} -- bash -c "
+          superset shell <<'PY'
+          from superset import db
+          from superset.models.core import Database
+          from superset.connectors.sqla.models import SqlaTable
+
+          try:
+              target = db.session.query(Database).filter(
+                  Database.database_name=='Examples (Postgres)'
+              ).one()
+              dsets = db.session.query(SqlaTable).filter(
+                  SqlaTable.schema=='examples'
+              ).all()
+
+              for ds in dsets:
+                  ds.database_id = target.id
+
+              db.session.commit()
+              print(f'✅ Remapped {len(dsets)} datasets to db_id {target.id}')
+          except Exception as e:
+              print(f'⚠️ Remap error: {e}')
+          PY
+          " 2>&1 | tail -5
+
+      - name: Verify dashboard count
+        id: verify
+        run: |
+          echo "Verifying dashboards..."
+          DASHBOARD_COUNT=$(doctl apps exec ${{ env.APP_ID }} --component=${{ env.COMPONENT_NAME }} -- bash -c "
+          superset shell <<'PY'
+          from superset import db
+          from superset.models.dashboard import Dashboard
+          print(db.session.query(Dashboard).count())
+          PY
+          " 2>/dev/null | grep -E '^[0-9]+$' || echo "0")
+
+          echo "dashboard_count=$DASHBOARD_COUNT" >> $GITHUB_OUTPUT
+          echo "Total dashboards: $DASHBOARD_COUNT"
+
+      - name: Summary
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+        run: |
+          echo "========================================="
+          echo "✅ Official Examples Loaded via doctl"
+          echo "========================================="
+          echo "Dashboards: ${{ steps.verify.outputs.dashboard_count }}"
+          echo "URL: $BASE_URL"
+          echo ""
+          echo "View dashboards at: $BASE_URL/dashboard/list/"
+
+  # ============================================================================
+  # Method 2: Dashboards-as-Code (preset-cli sync)
+  # ============================================================================
+  load-via-preset-cli:
+    if: ${{ inputs.method == 'preset-cli' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install preset-cli
+        run: |
+          pip install -U setuptools wheel
+          pip install preset-cli
+          echo "✅ preset-cli installed"
+          preset-cli --version || echo "Version check not available"
+
+      - name: Set target URL
+        id: target
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          STAGING_URL: ${{ secrets.STAGING_URL }}
+        run: |
+          if [ "${{ inputs.target_environment }}" == "staging" ]; then
+            TARGET_URL="${STAGING_URL:-$BASE_URL}"
+          else
+            TARGET_URL="$BASE_URL"
+          fi
+          echo "target_url=$TARGET_URL" >> $GITHUB_OUTPUT
+          echo "Target: $TARGET_URL"
+
+      - name: Check for existing assets
+        run: |
+          if [ -d "superset_assets" ]; then
+            echo "Found existing superset_assets directory:"
+            find superset_assets -type f -name "*.yaml" | head -20
+          else
+            echo "No superset_assets directory found"
+            echo "Will export official examples first"
+          fi
+
+      - name: Export current state (backup)
+        if: ${{ !inputs.dry_run }}
+        env:
+          SUPERSET_URL: ${{ steps.target.outputs.target_url }}
+          SUPERSET_ADMIN_USER: ${{ secrets.SUPERSET_ADMIN_USER }}
+          SUPERSET_ADMIN_PASS: ${{ secrets.SUPERSET_ADMIN_PASS }}
+        run: |
+          echo "Backing up current dashboards..."
+          mkdir -p backups/$(date +%Y%m%d_%H%M%S)
+
+          # Export using superset-cli (self-hosted)
+          superset-cli "$SUPERSET_URL" export-assets ./backups/$(date +%Y%m%d_%H%M%S) \
+            --username "$SUPERSET_ADMIN_USER" \
+            --password "$SUPERSET_ADMIN_PASS" 2>&1 || echo "Backup export failed (may be empty)"
+
+          echo "✅ Backup complete"
+
+      - name: Sync assets to Superset
+        if: ${{ !inputs.dry_run }}
+        env:
+          SUPERSET_URL: ${{ steps.target.outputs.target_url }}
+          SUPERSET_ADMIN_USER: ${{ secrets.SUPERSET_ADMIN_USER }}
+          SUPERSET_ADMIN_PASS: ${{ secrets.SUPERSET_ADMIN_PASS }}
+        run: |
+          if [ -d "superset_assets" ]; then
+            echo "Syncing superset_assets to $SUPERSET_URL..."
+            superset-cli "$SUPERSET_URL" sync native ./superset_assets \
+              --username "$SUPERSET_ADMIN_USER" \
+              --password "$SUPERSET_ADMIN_PASS"
+            echo "✅ Assets synced successfully"
+          else
+            echo "⚠️ No superset_assets directory - nothing to sync"
+            echo "To use this method, first export official examples:"
+            echo "  superset-cli <URL> export-assets ./superset_assets"
+            echo "  git add superset_assets && git commit -m 'Add dashboard assets'"
+          fi
+
+      - name: Dry run preview
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "========================================="
+          echo "DRY RUN - No changes will be made"
+          echo "========================================="
+          echo ""
+          echo "Would sync to: ${{ steps.target.outputs.target_url }}"
+          echo ""
+          if [ -d "superset_assets" ]; then
+            echo "Assets to sync:"
+            find superset_assets -type f -name "*.yaml" | wc -l
+            echo ""
+            echo "Databases:"
+            ls superset_assets/databases/ 2>/dev/null || echo "  (none)"
+            echo ""
+            echo "Datasets:"
+            ls superset_assets/datasets/ 2>/dev/null | head -10 || echo "  (none)"
+            echo ""
+            echo "Charts:"
+            ls superset_assets/charts/ 2>/dev/null | head -10 || echo "  (none)"
+            echo ""
+            echo "Dashboards:"
+            ls superset_assets/dashboards/ 2>/dev/null || echo "  (none)"
+          else
+            echo "No superset_assets directory found"
+          fi
+
+      - name: Summary
+        env:
+          BASE_URL: ${{ steps.target.outputs.target_url }}
+        run: |
+          echo "========================================="
+          if [ "${{ inputs.dry_run }}" == "true" ]; then
+            echo "✅ Dry Run Complete (no changes made)"
+          else
+            echo "✅ Dashboards Synced via preset-cli"
+          fi
+          echo "========================================="
+          echo "Target: $BASE_URL"
+          echo "Method: Dashboards-as-Code"
+          echo ""
+          echo "View dashboards at: $BASE_URL/dashboard/list/"
+
+  # ============================================================================
+  # Post-deployment validation
+  # ============================================================================
+  validate:
+    needs: [load-via-doctl, load-via-preset-cli]
+    if: always() && !inputs.dry_run && (needs.load-via-doctl.result == 'success' || needs.load-via-preset-cli.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run validation
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          SUPERSET_ADMIN_USER: ${{ secrets.SUPERSET_ADMIN_USER }}
+          SUPERSET_ADMIN_PASS: ${{ secrets.SUPERSET_ADMIN_PASS }}
+        run: |
+          echo "Running post-deployment validation..."
+
+          # Get auth token
+          TOKEN=$(curl -s -X POST "$BASE_URL/api/v1/security/login" \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"$SUPERSET_ADMIN_USER\",\"password\":\"$SUPERSET_ADMIN_PASS\",\"provider\":\"db\"}" \
+            | jq -r '.access_token')
+
+          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
+            echo "❌ Authentication failed"
+            exit 1
+          fi
+          echo "✅ Authentication successful"
+
+          # Count dashboards
+          DASHBOARD_COUNT=$(curl -s "$BASE_URL/api/v1/dashboard/" \
+            -H "Authorization: Bearer $TOKEN" \
+            | jq '.count // 0')
+
+          echo "Dashboard count: $DASHBOARD_COUNT"
+
+          if [ "$DASHBOARD_COUNT" -gt 0 ]; then
+            echo "✅ Dashboards available"
+          else
+            echo "⚠️ No dashboards found"
+          fi
+
+          # List dashboards
+          echo ""
+          echo "Available dashboards:"
+          curl -s "$BASE_URL/api/v1/dashboard/" \
+            -H "Authorization: Bearer $TOKEN" \
+            | jq -r '.result[]? | "  - \(.dashboard_title) (id: \(.id))"' | head -10

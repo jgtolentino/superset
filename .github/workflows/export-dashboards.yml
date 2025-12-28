@@ -1,0 +1,123 @@
+name: Export Dashboards to Git
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_changes:
+        description: 'Commit exported assets to repo'
+        required: true
+        default: true
+        type: boolean
+      branch:
+        description: 'Branch to commit to (leave empty for current)'
+        required: false
+        type: string
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install preset-cli
+        run: |
+          pip install -U setuptools wheel
+          pip install preset-cli
+          echo "✅ preset-cli installed"
+
+      - name: Export dashboards from Superset
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          SUPERSET_ADMIN_USER: ${{ secrets.SUPERSET_ADMIN_USER }}
+          SUPERSET_ADMIN_PASS: ${{ secrets.SUPERSET_ADMIN_PASS }}
+        run: |
+          echo "Exporting dashboards from $BASE_URL..."
+
+          # Clean existing assets
+          rm -rf superset_assets
+          mkdir -p superset_assets
+
+          # Export using superset-cli (self-hosted Superset)
+          superset-cli "$BASE_URL" export-assets ./superset_assets \
+            --username "$SUPERSET_ADMIN_USER" \
+            --password "$SUPERSET_ADMIN_PASS"
+
+          echo ""
+          echo "Exported assets:"
+          find superset_assets -type f -name "*.yaml" | wc -l
+          echo ""
+          tree superset_assets 2>/dev/null || find superset_assets -type f | head -30
+
+      - name: Show changes
+        run: |
+          echo "========================================="
+          echo "Changes to superset_assets:"
+          echo "========================================="
+          git status superset_assets --short || echo "No changes"
+          echo ""
+          git diff --stat superset_assets || echo "No diffs"
+
+      - name: Commit changes
+        if: ${{ inputs.commit_changes }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Switch branch if specified
+          if [ -n "${{ inputs.branch }}" ]; then
+            git checkout -B "${{ inputs.branch }}"
+          fi
+
+          # Add and commit
+          git add superset_assets/
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore(dashboards): export current dashboard state
+
+Automated export from: ${{ secrets.BASE_URL }}
+Triggered by: ${{ github.actor }}
+Workflow run: ${{ github.run_id }}"
+
+            git push origin HEAD
+            echo "✅ Changes committed and pushed"
+          fi
+
+      - name: Upload as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: superset-assets-${{ github.run_number }}
+          path: superset_assets/
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "========================================="
+          echo "✅ Dashboard Export Complete"
+          echo "========================================="
+          echo ""
+          echo "Databases:"
+          ls superset_assets/databases/ 2>/dev/null | wc -l || echo "0"
+          echo ""
+          echo "Datasets:"
+          ls superset_assets/datasets/ 2>/dev/null | wc -l || echo "0"
+          echo ""
+          echo "Charts:"
+          ls superset_assets/charts/ 2>/dev/null | wc -l || echo "0"
+          echo ""
+          echo "Dashboards:"
+          ls superset_assets/dashboards/ 2>/dev/null | wc -l || echo "0"
+          echo ""
+          if [ "${{ inputs.commit_changes }}" == "true" ]; then
+            echo "Changes committed to: $(git branch --show-current)"
+          else
+            echo "Assets available as artifact (not committed)"
+          fi
