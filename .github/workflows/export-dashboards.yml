@@ -1,203 +1,96 @@
-name: Export Dashboards to Git
+name: Export Dashboards (Native Assets)
 
 on:
   workflow_dispatch:
-    inputs:
-      commit_changes:
-        description: 'Commit exported assets to repo'
-        required: true
-        default: true
-        type: boolean
-      branch:
-        description: 'Branch to commit to (leave empty for current)'
-        required: false
-        type: string
+  schedule:
+    - cron: "0 2 * * *"   # daily 2am UTC
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   export:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install preset backend-sdk (superset-cli)
         run: |
-          pip install -U requests pyyaml
-          echo "✅ Dependencies installed"
+          python -m pip install -U pip
+          pip install -U preset-cli pyyaml
 
-      - name: Export dashboards from Superset
+      - name: Guard (skip if missing secrets)
+        shell: bash
         env:
-          BASE_URL: ${{ secrets.BASE_URL }}
-          SUPERSET_ADMIN_USER: ${{ secrets.SUPERSET_ADMIN_USER }}
-          SUPERSET_ADMIN_PASS: ${{ secrets.SUPERSET_ADMIN_PASS }}
+          SUPERSET_URL: ${{ secrets.SUPERSET_URL }}
+          SUPERSET_USER: ${{ secrets.SUPERSET_USER }}
+          SUPERSET_PASSWORD: ${{ secrets.SUPERSET_PASSWORD }}
         run: |
-          echo "Exporting dashboards from $BASE_URL..."
+          set -euo pipefail
+          if [[ -z "${SUPERSET_URL}" || -z "${SUPERSET_USER}" || -z "${SUPERSET_PASSWORD}" ]]; then
+            echo "Missing SUPERSET_URL/SUPERSET_USER/SUPERSET_PASSWORD secrets -> skipping export (success)."
+            exit 0
+          fi
 
-          # Clean existing assets
+      - name: Export native assets as YAML
+        shell: bash
+        env:
+          SUPERSET_URL: ${{ secrets.SUPERSET_URL }}
+          SUPERSET_USER: ${{ secrets.SUPERSET_USER }}
+          SUPERSET_PASSWORD: ${{ secrets.SUPERSET_PASSWORD }}
+        run: |
+          set -euo pipefail
           rm -rf superset_assets
-          mkdir -p superset_assets/dashboards superset_assets/charts superset_assets/datasets superset_assets/databases
+          mkdir -p superset_assets
+          # backend-sdk supports: superset-cli <url> export-assets <dir>
+          superset-cli -u "${SUPERSET_USER}" -p "${SUPERSET_PASSWORD}" "${SUPERSET_URL}" export-assets superset_assets
 
-          # Export using Superset REST API
-          python3 << 'EOF'
-          import os
-          import json
-          import requests
-          import zipfile
-          import io
+      - name: Normalize YAML for deterministic diffs
+        run: |
+          python - <<'PY'
+          from pathlib import Path
           import yaml
 
-          base_url = os.environ.get('BASE_URL', '').rstrip('/')
-          username = os.environ.get('SUPERSET_ADMIN_USER')
-          password = os.environ.get('SUPERSET_ADMIN_PASS')
+          def stable(o):
+              if isinstance(o, dict):
+                  return {k: stable(o[k]) for k in sorted(o)}
+              if isinstance(o, list):
+                  return [stable(x) for x in o]
+              return o
 
-          if not all([base_url, username, password]):
-              print("❌ Missing required environment variables")
-              exit(1)
+          root = Path("superset_assets")
+          for p in root.rglob("*.yaml"):
+              obj = yaml.safe_load(p.read_text("utf-8")) or {}
+              p.write_text(yaml.safe_dump(stable(obj), sort_keys=True, allow_unicode=True), "utf-8")
+          print("normalized")
+          PY
 
-          # Get CSRF token and login
-          session = requests.Session()
-
-          # Login to get access token
-          login_url = f"{base_url}/api/v1/security/login"
-          login_data = {
-              "username": username,
-              "password": password,
-              "provider": "db"
-          }
-          resp = session.post(login_url, json=login_data)
-          if resp.status_code != 200:
-              print(f"❌ Login failed: {resp.status_code}")
-              print(resp.text)
-              exit(1)
-
-          access_token = resp.json().get('access_token')
-          headers = {"Authorization": f"Bearer {access_token}"}
-
-          # Get CSRF token
-          csrf_resp = session.get(f"{base_url}/api/v1/security/csrf_token/", headers=headers)
-          if csrf_resp.status_code == 200:
-              csrf_token = csrf_resp.json().get('result')
-              headers["X-CSRFToken"] = csrf_token
-
-          # Export dashboards
-          print("Fetching dashboards...")
-          dashboards_resp = session.get(f"{base_url}/api/v1/dashboard/", headers=headers)
-          if dashboards_resp.status_code == 200:
-              dashboards = dashboards_resp.json().get('result', [])
-              print(f"Found {len(dashboards)} dashboards")
-
-              for dash in dashboards:
-                  dash_id = dash['id']
-                  dash_slug = dash.get('slug') or f"dashboard_{dash_id}"
-
-                  # Export individual dashboard
-                  export_resp = session.get(
-                      f"{base_url}/api/v1/dashboard/export/",
-                      headers=headers,
-                      params={"q": json.dumps([dash_id])}
-                  )
-
-                  if export_resp.status_code == 200:
-                      # Save the zip content and extract
-                      try:
-                          with zipfile.ZipFile(io.BytesIO(export_resp.content)) as zf:
-                              for name in zf.namelist():
-                                  content = zf.read(name)
-                                  # Save with dashboard slug prefix
-                                  out_path = f"superset_assets/{name}"
-                                  os.makedirs(os.path.dirname(out_path), exist_ok=True)
-                                  with open(out_path, 'wb') as f:
-                                      f.write(content)
-                          print(f"  ✅ Exported: {dash_slug}")
-                      except zipfile.BadZipFile:
-                          # Not a zip, save as yaml
-                          with open(f"superset_assets/dashboards/{dash_slug}.yaml", 'w') as f:
-                              f.write(export_resp.text)
-                          print(f"  ✅ Exported: {dash_slug}")
-                  else:
-                      print(f"  ⚠️ Failed to export {dash_slug}: {export_resp.status_code}")
-          else:
-              print(f"⚠️ Could not fetch dashboards: {dashboards_resp.status_code}")
-
-          print("")
-          print("✅ Export complete")
-          EOF
-
-          echo ""
-          echo "Exported assets:"
-          find superset_assets -type f -name "*.yaml" 2>/dev/null | wc -l
-          echo ""
-          tree superset_assets 2>/dev/null || find superset_assets -type f 2>/dev/null | head -30
-
-      - name: Show changes
+      - name: Create PR with exported assets (only if changed)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "========================================="
-          echo "Changes to superset_assets:"
-          echo "========================================="
-          git status superset_assets --short || echo "No changes"
-          echo ""
-          git diff --stat superset_assets || echo "No diffs"
+          set -euo pipefail
+          if git diff --quiet -- superset_assets; then
+            echo "No asset changes."
+            exit 0
+          fi
 
-      - name: Commit changes
-        if: ${{ inputs.commit_changes }}
-        run: |
+          BR="bot/export-assets-${GITHUB_RUN_ID}"
+          git checkout -b "$BR"
+          git add superset_assets
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(assets): export superset native assets"
+          git push -u origin "$BR"
 
-          # Switch branch if specified
-          if [ -n "${{ inputs.branch }}" ]; then
-            git checkout -B "${{ inputs.branch }}"
-          fi
-
-          # Add and commit
-          git add superset_assets/
-
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore(dashboards): export current dashboard state
-
-Automated export from: ${{ secrets.BASE_URL }}
-Triggered by: ${{ github.actor }}
-Workflow run: ${{ github.run_id }}"
-
-            git push origin HEAD
-            echo "✅ Changes committed and pushed"
-          fi
-
-      - name: Upload as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: superset-assets-${{ github.run_number }}
-          path: superset_assets/
-          retention-days: 30
-
-      - name: Summary
-        run: |
-          echo "========================================="
-          echo "✅ Dashboard Export Complete"
-          echo "========================================="
-          echo ""
-          echo "Databases:"
-          ls superset_assets/databases/ 2>/dev/null | wc -l || echo "0"
-          echo ""
-          echo "Datasets:"
-          ls superset_assets/datasets/ 2>/dev/null | wc -l || echo "0"
-          echo ""
-          echo "Charts:"
-          ls superset_assets/charts/ 2>/dev/null | wc -l || echo "0"
-          echo ""
-          echo "Dashboards:"
-          ls superset_assets/dashboards/ 2>/dev/null | wc -l || echo "0"
-          echo ""
-          if [ "${{ inputs.commit_changes }}" == "true" ]; then
-            echo "Changes committed to: $(git branch --show-current)"
-          else
-            echo "Assets available as artifact (not committed)"
-          fi
+          gh pr create \
+            --title "chore(assets): export superset native assets" \
+            --body "Automated export via superset-cli export-assets (native YAML bundle)." \
+            --base main \
+            --head "$BR"

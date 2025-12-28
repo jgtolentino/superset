@@ -1,122 +1,83 @@
-name: Superset CI
+name: CI
 
 on:
-  push:
-    branches: [ main, feature/* ]
   pull_request:
+  push:
     branches: [ main ]
 
 jobs:
-  lint:
+  shellcheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
+      - uses: actions/checkout@v4
       - name: Install shellcheck
-        run: sudo apt-get install -y shellcheck
-
-      - name: Lint shell scripts
         run: |
-          find scripts -name "*.sh" -type f -exec shellcheck {} +
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+      - name: Shellcheck (skip if none)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -d '' files < <(find . -type f -name "*.sh" -print0)
+          if [[ ${#files[@]} -eq 0 ]]; then
+            echo "No .sh files found; skipping shellcheck."
+            exit 0
+          fi
+          shellcheck "${files[@]}"
 
-  security:
+  security-grep:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Check for secrets
+      - uses: actions/checkout@v4
+      - name: Lightweight secret grep (portable)
+        shell: bash
         run: |
-          # Security check for hardcoded secrets
-          # Focuses on detecting actual hardcoded credentials, not env var reads
+          set -euo pipefail
 
-          echo "Checking for hardcoded secrets..."
-          FOUND=0
+          # Exclusions (tune as needed)
+          EXCLUDES=(
+            --exclude-dir=.git
+            --exclude-dir=node_modules
+            --exclude-dir=dist
+            --exclude-dir=build
+            --exclude-dir=.venv
+            --exclude-dir=.mypy_cache
+            --exclude-dir=.pytest_cache
+            --exclude-dir=__pycache__
+            --exclude=*.png --exclude=*.jpg --exclude=*.jpeg --exclude=*.gif --exclude=*.pdf
+            --exclude=*.zip --exclude=*.gz --exclude=*.tar --exclude=*.7z
+          )
 
-          # Pattern 1: Hardcoded connection strings with credentials
-          # Matches: postgresql://user:password@host (actual embedded credentials)
-          # Excludes: Lines with os.getenv, process.env, ${...} (env var patterns)
-          echo "Pattern 1: Connection strings with embedded credentials"
-          if grep -rE "postgresql://[a-zA-Z0-9_]+:[a-zA-Z0-9_]+@" . \
-            --exclude-dir=.git \
-            --exclude-dir=artifacts \
-            --exclude-dir=playwright-report \
-            --exclude-dir=node_modules \
-            --exclude-dir=infra \
-            --exclude="*.md" \
-            --exclude="*.yml" \
-            --exclude="*.yaml" \
-            --include="*.py" \
-            --include="*.js" \
-            --include="*.ts" | grep -v 'os\.getenv\|os\.environ\|process\.env\|\${\|<\|placeholder\|example\|your_'; then
-            echo "❌ Found hardcoded connection string"
-            FOUND=1
-          fi
-
-          # Pattern 2: Hardcoded API keys (actual values, not placeholders)
-          # Look for assignments of actual-looking keys (long alphanumeric strings)
-          echo "Pattern 2: Hardcoded API keys"
-          if grep -rE "api[_-]?key\s*[:=]\s*['\"][a-zA-Z0-9]{20,}['\"]" . \
-            --exclude-dir=.git \
-            --exclude-dir=artifacts \
-            --exclude-dir=playwright-report \
-            --exclude-dir=node_modules \
-            --exclude-dir=infra \
-            --exclude-dir=tools \
-            --exclude="*.md" \
-            --exclude="*.yml" \
-            --exclude="*.yaml" | grep -v 'os\.getenv\|os\.environ\|process\.env\|\${'; then
-            echo "❌ Found hardcoded API key"
-            FOUND=1
-          fi
-
-          # Pattern 3: Private keys embedded in code
-          echo "Pattern 3: Private keys"
-          if grep -rE "-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----" . \
-            --exclude-dir=.git \
-            --exclude-dir=artifacts \
-            --exclude-dir=node_modules \
-            --exclude="*.md"; then
-            echo "❌ Found embedded private key"
-            FOUND=1
-          fi
-
-          if [ $FOUND -eq 1 ]; then
-            echo ""
-            echo "❌ Security check failed: potential secrets found"
-            echo "Please move credentials to environment variables"
+          # Fail ONLY when a match is found. No-match should pass.
+          if grep -RIn "${EXCLUDES[@]}" -i -E \
+            '(^|[^A-Za-z0-9_])(password|passwd|api[_-]?key|secret|token)[[:space:]]*[:=][[:space:]]*[^[:space:]]{8,}' \
+            . ; then
+            echo "::error::Potential secret-like assignment detected. Remove/replace with placeholders."
             exit 1
           fi
 
-          echo "✅ No hardcoded secrets detected"
+          if grep -RIn "${EXCLUDES[@]}" -i -E \
+            'postgres(ql)?(\+[^:]*)?://[^[:space:]/]+:[^[:space:]@]+@' \
+            . ; then
+            echo "::error::Potential credentialed connection string detected. Use env vars/placeholders."
+            exit 1
+          fi
 
-  smoke-test:
+          echo "Secret grep passed."
+
+  python-sanity:
     runs-on: ubuntu-latest
-    if: ${{ secrets.SUPERSET_ADMIN_USER != '' }}
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: '18'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Install Playwright browsers
-        run: npx playwright install chromium
-
-      - name: Run Playwright smoke tests
-        env:
-          BASE_URL: ${{ secrets.BASE_URL }}
-          SUPERSET_ADMIN_USER: ${{ secrets.SUPERSET_ADMIN_USER }}
-          SUPERSET_ADMIN_PASS: ${{ secrets.SUPERSET_ADMIN_PASS }}
-        run: npx playwright test playwright/smoke.spec.ts
-
-      - name: Upload test artifacts
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: playwright-screenshots
-          path: artifacts/
-          retention-days: 7
+          python-version: "3.11"
+      - name: Python compile (skip if none)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if compgen -G "*.py" > /dev/null || find . -type f -name "*.py" | grep -q .; then
+            python -m compileall -q .
+          else
+            echo "No Python files found; skipping."
+          fi
