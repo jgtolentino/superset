@@ -32,22 +32,48 @@ jobs:
               echo ""
               echo "Checking: $spec_dir"
 
-              # Required files for each spec kit
-              REQUIRED_FILES=(
-                "constitution.md"
-                "prd.md"
-                "plan.md"
-                "tasks.md"
-              )
+              # Skip directories with .spec-kit-skip marker
+              if [ -f "${spec_dir}.spec-kit-skip" ]; then
+                echo "  ⏭️  Skipped (has .spec-kit-skip marker)"
+                continue
+              fi
 
-              for file in "${REQUIRED_FILES[@]}"; do
+              # Check if this is a traditional spec kit (has at least one required file)
+              # If none exist, it's a different type of spec (like competencies catalog)
+              HAS_SPEC_FILES=0
+              for file in constitution.md prd.md plan.md tasks.md; do
                 if [ -f "${spec_dir}${file}" ]; then
-                  echo "  ✅ ${file}"
-                else
-                  echo "  ❌ ${file} MISSING"
-                  ERRORS=$((ERRORS + 1))
+                  HAS_SPEC_FILES=1
+                  break
                 fi
               done
+
+              # If this is a traditional spec kit, validate all required files
+              if [ $HAS_SPEC_FILES -eq 1 ]; then
+                REQUIRED_FILES=(
+                  "constitution.md"
+                  "prd.md"
+                  "plan.md"
+                  "tasks.md"
+                )
+
+                for file in "${REQUIRED_FILES[@]}"; do
+                  if [ -f "${spec_dir}${file}" ]; then
+                    echo "  ✅ ${file}"
+                  else
+                    echo "  ❌ ${file} MISSING"
+                    ERRORS=$((ERRORS + 1))
+                  fi
+                done
+              else
+                # Alternative spec format - just check for README.md
+                if [ -f "${spec_dir}README.md" ]; then
+                  echo "  ℹ️  Alternative spec format (has README.md)"
+                  echo "  ✅ README.md"
+                else
+                  echo "  ⚠️  No README.md or spec files found"
+                fi
+              fi
             fi
           done
 
@@ -132,13 +158,32 @@ jobs:
             if [ -d "$spec_dir" ]; then
               spec_name=$(basename "$spec_dir")
               echo "- \`$spec_name\`" >> $GITHUB_STEP_SUMMARY
+
+              # Check if traditional spec kit
+              HAS_SPEC_FILES=0
               for file in constitution.md prd.md plan.md tasks.md; do
                 if [ -f "${spec_dir}${file}" ]; then
-                  echo "  - ✅ ${file}" >> $GITHUB_STEP_SUMMARY
-                else
-                  echo "  - ❌ ${file} (missing)" >> $GITHUB_STEP_SUMMARY
+                  HAS_SPEC_FILES=1
+                  break
                 fi
               done
+
+              if [ $HAS_SPEC_FILES -eq 1 ]; then
+                for file in constitution.md prd.md plan.md tasks.md; do
+                  if [ -f "${spec_dir}${file}" ]; then
+                    echo "  - ✅ ${file}" >> $GITHUB_STEP_SUMMARY
+                  else
+                    echo "  - ❌ ${file} (missing)" >> $GITHUB_STEP_SUMMARY
+                  fi
+                done
+              else
+                # Alternative format
+                if [ -f "${spec_dir}README.md" ]; then
+                  echo "  - ℹ️ Alternative format (README.md based)" >> $GITHUB_STEP_SUMMARY
+                fi
+                file_count=$(find "$spec_dir" -maxdepth 1 -type f -name "*.md" | wc -l)
+                echo "  - 📄 ${file_count} markdown files" >> $GITHUB_STEP_SUMMARY
+              fi
             fi
           done
 
