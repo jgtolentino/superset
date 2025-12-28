@@ -86,7 +86,7 @@ check_database() {
   TEST_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/v1/database/${DB_ID}/validate_parameters/" \
     -H "Authorization: Bearer ${ACCESS_TOKEN}" \
     -H "Content-Type: application/json" \
-    -d '{"sqlalchemy_uri":"","engine":"postgresql"}' 2>/dev/null || echo -e "\n404")
+    -d '{"sqlalchemy_uri":"","engine":"postgresql"}' 2>/dev/null || printf '\n404')
 
   HTTP_CODE=$(echo "$TEST_RESPONSE" | tail -n1)
 
@@ -189,7 +189,7 @@ check_sql_execution() {
       \"sql\": \"SELECT COUNT(*) as count FROM examples.birth_names LIMIT 1\",
       \"runAsync\": false,
       \"schema\": \"examples\"
-    }" 2>/dev/null || echo -e "\n500")
+    }" 2>/dev/null || printf '\n500')
 
   HTTP_CODE=$(echo "$SQL_RESPONSE" | tail -n1)
 

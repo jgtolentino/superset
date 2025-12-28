@@ -111,7 +111,7 @@ check_sql_execution() {
       \"sql\": \"SELECT COUNT(*) as n FROM examples.birth_names\",
       \"runAsync\": false,
       \"schema\": \"examples\"
-    }" 2>/dev/null || echo -e "\n500")
+    }" 2>/dev/null || printf '\n500')
 
   HTTP_CODE=$(echo "$SQL_RESPONSE" | tail -n1)
 
