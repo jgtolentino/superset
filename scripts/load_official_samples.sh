@@ -55,7 +55,7 @@ superset fab create-admin \
   --firstname Admin \
   --lastname User \
   --email admin@example.com \
-  --password '$SUPERSET_ADMIN_PASS' 2>&1 || echo 'Admin user already exists (OK)'
+  --password \"\${SUPERSET_ADMIN_PASS}\" 2>&1 || echo 'Admin user already exists (OK)'
 " | tail -5
 echo "✅ Admin user verified"
 echo ""
@@ -92,7 +92,7 @@ PY
 
 echo "Total dashboards in metadata DB: $DASHBOARD_COUNT"
 
-if [ "$DASHBOARD_COUNT" -gt 0 ]; then
+if [[ "$DASHBOARD_COUNT" -gt 0 ]]; then
   echo "✅ Dashboards verified"
 else
   echo "⚠️  No dashboards found - load-examples may have failed"

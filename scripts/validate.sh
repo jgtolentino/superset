@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASE_URL="${BASE_URL:-http://localhost:8088}"
 
 TEMP_TOKEN_FILE=$(mktemp)
-trap "rm -f $TEMP_TOKEN_FILE" EXIT
+trap 'rm -f "$TEMP_TOKEN_FILE"' EXIT
 
 FAILED=0
 
@@ -31,7 +31,7 @@ check_health() {
   echo "🏥 Checking /health endpoint..."
   HEALTH=$(curl -s -w "%{http_code}" -o /dev/null "${BASE_URL}/health")
 
-  if [ "$HEALTH" = "200" ]; then
+  if [[ "$HEALTH" == "200" ]]; then
     echo "  ✅ Health check passed (HTTP 200)"
     return 0
   else
@@ -51,7 +51,7 @@ authenticate() {
   HTTP_CODE=$(echo "$LOGIN_RESPONSE" | tail -n1)
   RESPONSE_BODY=$(echo "$LOGIN_RESPONSE" | sed '$d')
 
-  if [ "$HTTP_CODE" != "200" ]; then
+  if [[ "$HTTP_CODE" != "200" ]]; then
     echo "  ❌ Authentication failed (HTTP $HTTP_CODE)"
     return 1
   fi
@@ -73,7 +73,7 @@ check_database() {
 
   DB_COUNT=$(echo "$DB_LIST" | python3 -c "import sys, json; print(json.load(sys.stdin).get('count', 0))" 2>/dev/null || echo "0")
 
-  if [ "$DB_COUNT" = "0" ]; then
+  if [[ "$DB_COUNT" == "0" ]]; then
     echo "  ❌ Database 'Examples (Postgres)' not found"
     return 1
   fi
@@ -90,7 +90,7 @@ check_database() {
 
   HTTP_CODE=$(echo "$TEST_RESPONSE" | tail -n1)
 
-  if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+  if [[ "$HTTP_CODE" == "200" ]] || [[ "$HTTP_CODE" == "201" ]]; then
     echo "  ✅ Database connection healthy"
     return 0
   else
@@ -114,7 +114,7 @@ check_datasets() {
 
     COUNT=$(echo "$DATASET_LIST" | python3 -c "import sys, json; print(json.load(sys.stdin).get('count', 0))" 2>/dev/null || echo "0")
 
-    if [ "$COUNT" = "0" ]; then
+    if [[ "$COUNT" == "0" ]]; then
       echo "  ❌ Dataset ${TABLE} not found"
     else
       DATASET_ID=$(echo "$DATASET_LIST" | python3 -c "import sys, json; print(json.load(sys.stdin)['result'][0]['id'])")
@@ -123,7 +123,7 @@ check_datasets() {
     fi
   done
 
-  if [ "$FOUND" = "3" ]; then
+  if [[ "$FOUND" == "3" ]]; then
     echo "  ✅ All 3 datasets found"
     return 0
   else
@@ -175,7 +175,7 @@ check_sql_execution() {
 
   DB_ID=$(echo "$DB_LIST" | python3 -c "import sys, json; print(json.load(sys.stdin)['result'][0]['id'])" 2>/dev/null || echo "0")
 
-  if [ "$DB_ID" = "0" ]; then
+  if [[ "$DB_ID" == "0" ]]; then
     echo "  ❌ Cannot find database for SQL test"
     return 1
   fi
@@ -193,10 +193,10 @@ check_sql_execution() {
 
   HTTP_CODE=$(echo "$SQL_RESPONSE" | tail -n1)
 
-  if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+  if [[ "$HTTP_CODE" == "200" ]] || [[ "$HTTP_CODE" == "201" ]]; then
     echo "  ✅ SQL query executed successfully"
     return 0
-  elif [ "$HTTP_CODE" = "500" ]; then
+  elif [[ "$HTTP_CODE" == "500" ]]; then
     RESPONSE_BODY=$(echo "$SQL_RESPONSE" | sed '$d')
     if echo "$RESPONSE_BODY" | grep -q "RESULTS_BACKEND_NOT_CONFIGURED"; then
       echo "  ⚠️  SQL Lab requires results backend (Redis) - expected in basic setup"
@@ -232,7 +232,7 @@ check_sql_execution || FAILED=$((FAILED + 1))
 
 echo ""
 echo "========================================="
-if [ "$FAILED" -eq 0 ]; then
+if [[ "$FAILED" -eq 0 ]]; then
   echo "=== ✅ All Validation Checks Passed ==="
   echo "========================================="
   exit 0
