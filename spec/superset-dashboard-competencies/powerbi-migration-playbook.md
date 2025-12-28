@@ -841,9 +841,145 @@ superset-cli https://superset.example.com sync native superset_assets/
 
 ---
 
+## Advanced: ECharts-First Viz Type Resolution
+
+### Viz Type Discovery Script
+
+Discover available viz types from the running Superset backend:
+
+```bash
+# Run inside Superset container
+docker compose exec superset python /app/scripts/discover_viz_types.py \
+  /app/available_viz_types.json
+
+# Or via kubectl
+kubectl exec -it superset-pod -- python /app/scripts/discover_viz_types.py \
+  /app/available_viz_types.json
+```
+
+**Output (`available_viz_types.json`):**
+```json
+{
+  "count": 45,
+  "echarts_count": 15,
+  "classic_count": 30,
+  "viz_types": ["echarts_bar", "echarts_pie", "echarts_timeseries_line", ...],
+  "echarts_types": ["echarts_bar", "echarts_pie", ...],
+  "classic_types": ["line", "bar", "pie", ...]
+}
+```
+
+### Viz Catalog with ECharts-First Fallback
+
+Use `viz_catalog.yaml` to define ECharts preferences with automatic fallback:
+
+```yaml
+# viz_catalog.yaml
+version: 2
+defaults:
+  library: echarts
+  reference_gallery: "https://echarts.apache.org/examples/en/"
+
+charts:
+  line:
+    echarts_candidates:
+      - "echarts_timeseries_line"
+      - "echarts_line"
+    superset_fallback:
+      - "line"
+    template: "echarts_timeseries.yaml.j2"
+    requires: ["metric_name", "time_col"]
+
+  bar:
+    echarts_candidates:
+      - "echarts_bar"
+      - "echarts_timeseries_bar"
+    superset_fallback:
+      - "bar"
+    template: "echarts_bar.yaml.j2"
+    requires: ["metric_name", "category_col"]
+
+  pie:
+    echarts_candidates:
+      - "echarts_pie"
+    superset_fallback:
+      - "pie"
+    template: "echarts_pie.yaml.j2"
+    requires: ["metric_name", "category_col"]
+```
+
+### Viz Type Resolver in Generator
+
+```python
+import re
+import yaml
+
+def load_available_viz_types():
+    """Load discovered viz types from JSON file."""
+    avail_path = BASE_DIR / "available_viz_types.json"
+    if avail_path.exists():
+        data = json.loads(avail_path.read_text())
+        return data.get("viz_types", [])
+    # Fallback defaults
+    return [
+        "echarts_timeseries_line", "echarts_bar", "echarts_pie",
+        "line", "bar", "pie", "scatter", "heatmap"
+    ]
+
+def pick_viz_type(available: list, candidates: list) -> str | None:
+    """Pick first matching viz type from candidates."""
+    avail_set = set(available)
+    # Exact match
+    for c in candidates:
+        if c in avail_set:
+            return c
+    # Fuzzy match
+    for c in candidates:
+        pattern = re.sub(r"[_\-]+", ".*", re.escape(c))
+        rx = re.compile(pattern, re.IGNORECASE)
+        for a in available:
+            if rx.search(a):
+                return a
+    return None
+
+def resolve_viz_type(kind: str, catalog: dict, available: list) -> str:
+    """Resolve viz_type with ECharts-first, fallback to classic."""
+    kind_entry = catalog["charts"].get(kind, {})
+
+    # Try ECharts candidates first
+    viz = pick_viz_type(available, kind_entry.get("echarts_candidates", []))
+    if viz:
+        return viz
+
+    # Fallback to classic types
+    viz = pick_viz_type(available, kind_entry.get("superset_fallback", []))
+    if viz:
+        return viz
+
+    # Last resort
+    fallbacks = kind_entry.get("superset_fallback", ["line"])
+    return fallbacks[0]
+```
+
+### Power BI to Superset Visual Mapping
+
+| Power BI Visual | Neutral Kind | ECharts Candidate | Classic Fallback |
+|-----------------|--------------|-------------------|------------------|
+| `clusteredColumnChart` | `bar` | `echarts_bar` | `bar` |
+| `lineChart` | `line` | `echarts_timeseries_line` | `line` |
+| `pieChart` | `pie` | `echarts_pie` | `pie` |
+| `card` | `kpi` | - | `big_number` |
+| `gauge` | `gauge` | `echarts_gauge` | `big_number` |
+| `funnel` | `funnel` | `echarts_funnel` | `funnel` |
+| `treemap` | `treemap` | `echarts_treemap` | `treemap` |
+| `scatterChart` | `scatter` | `echarts_scatter` | `scatter` |
+
+---
+
 ## Resources
 
 - [pbi-tools](https://pbi.tools) - PBIX extraction tool
 - [Power BI Desktop Samples](https://github.com/microsoft/powerbi-desktop-samples)
+- [ECharts Examples Gallery](https://echarts.apache.org/examples/en/) - Canonical chart patterns
 - [DAX to SQL Guide](https://docs.microsoft.com/en-us/dax/)
 - [preset-cli](https://github.com/preset-io/backend-sdk)
