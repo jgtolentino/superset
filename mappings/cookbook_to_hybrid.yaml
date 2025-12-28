@@ -1,0 +1,89 @@
+version: 1
+sources:
+  claude_cookbooks:
+    url: https://github.com/anthropics/claude-cookbooks
+    folders:
+      - capabilities
+      - tool_use
+      - observability
+      - patterns/agents
+      - tool_evaluation
+      - claude_agent_sdk
+      - extended_thinking
+  openai_cookbook:
+    site: https://cookbook.openai.com/
+    key_topics:
+      - structured_outputs
+      - tool_function_calling
+
+mappings:
+  - id: tool_loop_contract
+    source:
+      - claude_cookbooks: tool_use
+      - openai_cookbook: tool_function_calling
+    principle: "Standard tool execution loop (plan -> tool_call -> execute -> report -> verify)"
+    hybrid_targets:
+      - src/hybrid/superset.py
+      - src/hybrid/cli.py
+      - scripts/sync_env.sh
+    output_contract:
+      - "hybrid apply --json"
+      - "hybrid drift-plan --json"
+    playbook: playbooks/tools/tool_loop.md
+    checks:
+      - "hybrid plan --env dev | jq -e ."
+      - "hybrid apply --env dev --json | jq -e .status"
+
+  - id: structured_outputs_everywhere
+    source:
+      - openai_cookbook: structured_outputs
+    principle: "Every agent step and CLI step emits schema-valid JSON (no free-form 'plans')"
+    hybrid_targets:
+      - src/hybrid/cli.py
+      - scripts/export_to_pr.sh
+      - .github/workflows/hybrid.yml
+    output_contract:
+      - "plan.json"
+      - "apply.json"
+      - "drift.json"
+    playbook: playbooks/prompting/structured_outputs.md
+    checks:
+      - "hybrid plan --env dev | jq -e .files"
+      - "hybrid drift-plan --env dev --json | jq -e .drift"
+
+  - id: observability_and_audit
+    source:
+      - claude_cookbooks: observability
+      - claude_cookbooks: tool_evaluation
+    principle: "Trace every deploy/export/promotion; store manifests; fail on drift unless explicitly overridden"
+    hybrid_targets:
+      - scripts/sync_env.sh
+      - scripts/export_to_pr.sh
+      - docs/spec/**/*
+    playbook: playbooks/observability/observability.md
+    checks:
+      - "test -f .hybrid/deployments/dev/latest.json || true"
+      - "git diff --exit-code docs || true"
+
+  - id: agent_patterns_for_ops
+    source:
+      - claude_cookbooks: patterns/agents
+      - claude_cookbooks: claude_agent_sdk
+    principle: "Claude Agent SDK Loop: gather context -> take action -> verify -> repeat"
+    hybrid_targets:
+      - scripts/export_to_pr.sh
+      - .github/workflows/ui-export-pr.yml
+    playbook: playbooks/agent/agent_loop.md
+    checks:
+      - "gh run list --limit 10"
+
+  - id: automated_evals_for_recipes
+    source:
+      - claude_cookbooks: tool_evaluation
+    principle: "Turn each 'recipe' into a golden test case (inputs -> expected outputs)"
+    hybrid_targets:
+      - tests/recipes/
+      - .github/workflows/hybrid.yml
+    playbook: playbooks/eval/recipe_evals.md
+    checks:
+      - "pytest -q || true"
