@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASE_URL="${BASE_URL:-https://superset.insightpulseai.net}"
 
 TEMP_TOKEN_FILE=$(mktemp)
-trap "rm -f $TEMP_TOKEN_FILE" EXIT
+trap 'rm -f "$TEMP_TOKEN_FILE"' EXIT
 
 FAILED=0
 
@@ -39,7 +39,7 @@ check_datasets_api() {
   HTTP_CODE=$(echo "$LOGIN_RESPONSE" | tail -n1)
   RESPONSE_BODY=$(echo "$LOGIN_RESPONSE" | sed '$d')
 
-  if [ "$HTTP_CODE" != "200" ]; then
+  if [[ "$HTTP_CODE" != "200" ]]; then
     echo "  ❌ Authentication failed (HTTP $HTTP_CODE)"
     return 1
   fi
@@ -55,7 +55,7 @@ check_datasets_api() {
   HTTP_CODE=$(echo "$DATASET_RESPONSE" | tail -n1)
   RESPONSE_BODY=$(echo "$DATASET_RESPONSE" | sed '$d')
 
-  if [ "$HTTP_CODE" != "200" ]; then
+  if [[ "$HTTP_CODE" != "200" ]]; then
     echo "  ❌ Dataset API call failed (HTTP $HTTP_CODE)"
     return 1
   fi
@@ -95,7 +95,7 @@ check_sql_execution() {
 
   DB_ID=$(echo "$DB_RESPONSE" | python3 -c "import sys, json; r=json.load(sys.stdin); print(r['result'][0]['id'] if r.get('count',0)>0 else 'NOT_FOUND')" 2>/dev/null || echo "NOT_FOUND")
 
-  if [ "$DB_ID" = "NOT_FOUND" ]; then
+  if [[ "$DB_ID" == "NOT_FOUND" ]]; then
     echo "  ⚠️  Examples (Postgres) database not found - skipping SQL execution test"
     return 0
   fi
@@ -115,10 +115,10 @@ check_sql_execution() {
 
   HTTP_CODE=$(echo "$SQL_RESPONSE" | tail -n1)
 
-  if [ "$HTTP_CODE" = "200" ]; then
+  if [[ "$HTTP_CODE" == "200" ]]; then
     echo "  ✅ SQL query executed successfully"
     return 0
-  elif [ "$HTTP_CODE" = "500" ]; then
+  elif [[ "$HTTP_CODE" == "500" ]]; then
     RESPONSE_BODY=$(echo "$SQL_RESPONSE" | sed '$d')
     if echo "$RESPONSE_BODY" | grep -q "RESULTS_BACKEND_NOT_CONFIGURED"; then
       echo "  ⚠️  SQL Lab requires results backend (Redis) - expected in basic setup"
@@ -155,9 +155,16 @@ check_ui_screenshots() {
 
   # Check for screenshots
   echo ""
-  if ls artifacts/*.png 1> /dev/null 2>&1; then
+  shopt -s nullglob
+  PNG_FILES=(artifacts/*.png)
+  shopt -u nullglob
+
+  if [[ ${#PNG_FILES[@]} -gt 0 ]]; then
     echo "  ✅ Screenshot evidence captured:"
-    ls -lh artifacts/*.png | awk '{print "    " $9 " (" $5 ")"}'
+    for f in "${PNG_FILES[@]}"; do
+      SIZE=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null || echo "?")
+      echo "    $f (${SIZE} bytes)"
+    done
   else
     echo "  ❌ No screenshots found in artifacts/"
     return 1
@@ -186,7 +193,7 @@ check_ui_screenshots || FAILED=$((FAILED + 1))
 
 echo ""
 echo "========================================="
-if [ "$FAILED" -eq 0 ]; then
+if [[ "$FAILED" -eq 0 ]]; then
   echo "=== ✅ All End-to-End Checks Passed ==="
   echo "========================================="
   echo ""
