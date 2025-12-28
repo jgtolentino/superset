@@ -356,6 +356,72 @@
         }
       ]
     },
+    "dashboardsAsCode": {
+      "name": "Dashboards as Code",
+      "technologies": ["preset-cli", "backend-sdk", "GitHub Actions", "YAML"],
+      "competencies": [
+        {
+          "id": "DAC-001",
+          "name": "CLI Fundamentals",
+          "level": "L1",
+          "skills": [
+            "preset-cli installation",
+            "Authentication (token/secret)",
+            "Basic export-assets command",
+            "Basic sync native command",
+            "Understanding YAML asset structure"
+          ]
+        },
+        {
+          "id": "DAC-002",
+          "name": "Asset Management",
+          "level": "L2",
+          "skills": [
+            "Database definition YAML",
+            "Dataset definition YAML",
+            "Chart definition YAML",
+            "Dashboard definition YAML",
+            "Asset dependency ordering"
+          ]
+        },
+        {
+          "id": "DAC-003",
+          "name": "Version Control Integration",
+          "level": "L2",
+          "skills": [
+            "Git workflow for assets",
+            "PR-based dashboard changes",
+            "Diff review for YAML changes",
+            "Branch strategies for environments",
+            "Merge conflict resolution"
+          ]
+        },
+        {
+          "id": "DAC-004",
+          "name": "CI/CD Pipeline Design",
+          "level": "L3",
+          "skills": [
+            "GitHub Actions for deployment",
+            "Multi-environment promotion",
+            "Secrets management in CI",
+            "Dry-run validation",
+            "Rollback procedures"
+          ]
+        },
+        {
+          "id": "DAC-005",
+          "name": "Enterprise Patterns",
+          "level": "L3",
+          "skills": [
+            "Multi-workspace management",
+            "Self-hosted vs Preset Cloud",
+            "Credential separation",
+            "Audit trail maintenance",
+            "Disaster recovery"
+          ]
+        }
+      ]
+    },
     "visualization": {
       "name": "Data Visualization",
       "technologies": ["ECharts", "D3.js", "@superset-ui", "Chart.js"],
@@ -454,6 +520,21 @@
         "INF-003", "INF-004", "INF-005",
         "VIZ-003", "VIZ-004",
         "TEST-004", "TEST-005"
+      ]
+    },
+    "platformEngineer": {
+      "name": "Platform Engineer Track",
+      "description": "Focus on Dashboards-as-Code, CI/CD, and infrastructure",
+      "requiredCompetencies": [
+        "INF-001", "INF-002", "INF-003",
+        "DAC-001", "DAC-002", "DAC-003",
+        "TEST-001", "TEST-003"
+      ],
+      "advancedCompetencies": [
+        "INF-004", "INF-005",
+        "DAC-004", "DAC-005",
+        "BE-006",
+        "TEST-004"
       ]
     }
   },
