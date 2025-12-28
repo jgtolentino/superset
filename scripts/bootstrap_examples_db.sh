@@ -32,7 +32,7 @@ LOGIN_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/v1/securit
 HTTP_CODE=$(echo "$LOGIN_RESPONSE" | tail -n1)
 RESPONSE_BODY=$(echo "$LOGIN_RESPONSE" | sed '$d')
 
-if [ "$HTTP_CODE" != "200" ]; then
+if [[ "$HTTP_CODE" != "200" ]]; then
   echo "❌ Authentication failed (HTTP $HTTP_CODE)"
   echo "$RESPONSE_BODY" | head -5
   exit 1
@@ -61,7 +61,7 @@ else:
     print('0')
 " 2>/dev/null || echo "0")
 
-if [ "$DB_ID" = "0" ]; then
+if [[ "$DB_ID" == "0" ]]; then
   echo "Creating new database connection..."
 
   CREATE_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/v1/database/" \
@@ -79,7 +79,7 @@ if [ "$DB_ID" = "0" ]; then
   HTTP_CODE=$(echo "$CREATE_RESPONSE" | tail -n1)
   RESPONSE_BODY=$(echo "$CREATE_RESPONSE" | sed '$d')
 
-  if [ "$HTTP_CODE" != "201" ]; then
+  if [[ "$HTTP_CODE" != "201" ]]; then
     echo "❌ Failed to create database (HTTP $HTTP_CODE)"
     echo "$RESPONSE_BODY" | head -10
     exit 1
@@ -109,7 +109,7 @@ for TABLE in "${DATASETS[@]}"; do
 
   DATASET_COUNT=$(echo "$DATASET_LIST" | python3 -c "import sys, json; print(json.load(sys.stdin).get('count', 0))" 2>/dev/null || echo "0")
 
-  if [ "$DATASET_COUNT" = "0" ]; then
+  if [[ "$DATASET_COUNT" == "0" ]]; then
     CREATE_DATASET=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/v1/dataset/" \
       -H "Authorization: Bearer ${ACCESS_TOKEN}" \
       -H "Content-Type: application/json" \
@@ -121,7 +121,7 @@ for TABLE in "${DATASETS[@]}"; do
 
     HTTP_CODE=$(echo "$CREATE_DATASET" | tail -n1)
 
-    if [ "$HTTP_CODE" = "201" ]; then
+    if [[ "$HTTP_CODE" == "201" ]]; then
       DATASET_ID=$(echo "$CREATE_DATASET" | sed '$d' | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])")
       echo "  ✅ Created dataset ${TABLE} (id=${DATASET_ID})"
     else
