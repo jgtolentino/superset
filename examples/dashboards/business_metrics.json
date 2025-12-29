@@ -1,0 +1,22 @@
+{
+  "dashboard_title": "Business Metrics Overview",
+  "description": "Dashboard showcasing key business metrics and KPIs",
+  "css": "",
+  "slug": "business-metrics-overview",
+  "published": true,
+  "position_json": "{\"DASHBOARD_VERSION_KEY\":\"v2\",\"DASHBOARD_ROOT_ID\":\"GRID_ID\",\"GRID_ID\":{\"type\":\"GRID\",\"id\":\"GRID_ID\",\"children\":[],\"parents\":[\"ROOT_ID\"]}}",
+  "metadata": {
+    "filter_scopes": {},
+    "expanded_slices": {},
+    "refresh_frequency": 0,
+    "default_filters": "{}",
+    "color_scheme": "supersetColors",
+    "label_colors": {},
+    "timed_refresh_immune_slices": [],
+    "color_scheme_domain": []
+  },
+  "slices": [],
+  "certification_details": null,
+  "certified_by": null,
+  "is_managed_externally": false
+}
