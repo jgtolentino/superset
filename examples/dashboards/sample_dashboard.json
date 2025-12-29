@@ -1,0 +1,17 @@
+{
+  "dashboard_title": "Sample Analytics Dashboard",
+  "description": "Example dashboard for demonstrating import functionality",
+  "css": "",
+  "slug": "sample-analytics",
+  "published": true,
+  "position_json": "{\"DASHBOARD_VERSION_KEY\":\"v2\"}",
+  "metadata": {
+    "filter_scopes": {},
+    "expanded_slices": {},
+    "refresh_frequency": 0,
+    "default_filters": "{}",
+    "color_scheme": "",
+    "label_colors": {}
+  },
+  "slices": []
+}

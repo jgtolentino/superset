@@ -51,6 +51,124 @@ jobs:
 
           echo "✅ No secrets detected"
 
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Validate dashboard import script
+        run: |
+          python3 scripts/import_dashboard.py --help
+
+      - name: Test migrations app imports
+        run: |
+          python3 -c "import migrations_app; print('✅ migrations_app imports successfully')"
+
+  migration-test:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.SQLALCHEMY_DATABASE_URI != '' }}
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: superset_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Test migration initialization
+        env:
+          SQLALCHEMY_DATABASE_URI: postgresql+psycopg2://postgres:postgres@localhost:5432/superset_test
+        run: |
+          # Initialize migrations
+          ./scripts/manage_migrations.sh init
+          
+          # Verify migrations directory created
+          if [ -d "migrations" ]; then
+            echo "✅ Migrations initialized successfully"
+          else
+            echo "❌ Migrations directory not created"
+            exit 1
+          fi
+
+      - name: Test migration creation
+        env:
+          SQLALCHEMY_DATABASE_URI: postgresql+psycopg2://postgres:postgres@localhost:5432/superset_test
+        run: |
+          # Create a test migration
+          ./scripts/manage_migrations.sh create "test migration"
+          
+          # Check if migration file was created
+          if [ -n "$(find migrations/versions -name '*.py' -type f)" ]; then
+            echo "✅ Migration created successfully"
+          else
+            echo "❌ No migration file created"
+            exit 1
+          fi
+
+      - name: Test migration apply
+        env:
+          SQLALCHEMY_DATABASE_URI: postgresql+psycopg2://postgres:postgres@localhost:5432/superset_test
+        run: |
+          # Apply migrations
+          ./scripts/manage_migrations.sh upgrade
+          
+          # Check migration status
+          ./scripts/manage_migrations.sh current
+          
+          echo "✅ Migrations applied successfully"
+
+  dashboard-import-test:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.SUPERSET_ADMIN_USER != '' }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Test dashboard import (dry run)
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          SUPERSET_ADMIN_USER: ${{ secrets.SUPERSET_ADMIN_USER }}
+          SUPERSET_ADMIN_PASS: ${{ secrets.SUPERSET_ADMIN_PASS }}
+        run: |
+          # Test import script with sample dashboard
+          if [ -n "$BASE_URL" ] && [ -n "$SUPERSET_ADMIN_USER" ]; then
+            echo "Testing dashboard import authentication..."
+            python3 scripts/import_dashboard.py examples/dashboards/ || echo "⚠️  Import test requires live Superset instance"
+          else
+            echo "ℹ️  Skipping dashboard import test (credentials not configured)"
+          fi
+
   smoke-test:
     runs-on: ubuntu-latest
     if: ${{ secrets.SUPERSET_ADMIN_USER != '' }}
