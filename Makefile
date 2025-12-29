@@ -10,7 +10,7 @@ SUPERSET_ADMIN_USER ?=
 SUPERSET_ADMIN_PASS ?=
 EXAMPLES_DB_URI ?=
 
-.PHONY: help bootstrap validate ui-smoke end-to-end clean version digest
+.PHONY: help bootstrap validate ui-smoke end-to-end clean version digest import-dashboards migration-init migration-create migration-upgrade migration-status
 
 help: ## Show this help message
 	@echo "Superset PostgreSQL-Native Production - Available Targets:"
@@ -22,6 +22,9 @@ help: ## Show this help message
 	@echo "  - SUPERSET_ADMIN_PASS"
 	@echo "  - EXAMPLES_DB_URI"
 	@echo "  - BASE_URL (optional, defaults to https://superset.insightpulseai.net)"
+	@echo ""
+	@echo "For migrations, also set:"
+	@echo "  - SUPERSET__SQLALCHEMY_DATABASE_URI (or SQLALCHEMY_DATABASE_URI)"
 
 bootstrap: ## Bootstrap Superset with Examples (Postgres) database and datasets
 	@echo "=== Running Bootstrap Script ==="
@@ -44,6 +47,38 @@ end-to-end: ## Run end-to-end proof suite (datasets API + SQL + UI)
 load-samples: ## Load official Superset sample dashboards into production
 	@echo "=== Loading Official Superset Samples ==="
 	@./scripts/load_official_samples.sh
+
+import-dashboards: ## Import all example dashboards from examples/dashboards/
+	@echo "=== Importing Dashboards ==="
+	@python3 scripts/import_dashboard.py examples/dashboards/
+
+import-dashboard: ## Import single dashboard (usage: make import-dashboard DASH=file.json)
+	@echo "=== Importing Dashboard: $(DASH) ==="
+	@python3 scripts/import_dashboard.py $(DASH)
+
+migration-init: ## Initialize database migrations (first time only)
+	@echo "=== Initializing Migrations ==="
+	@./scripts/manage_migrations.sh init
+
+migration-create: ## Create new migration (usage: make migration-create MSG="migration name")
+	@echo "=== Creating Migration ==="
+	@./scripts/manage_migrations.sh create "$(MSG)"
+
+migration-upgrade: ## Apply all pending migrations
+	@echo "=== Applying Migrations ==="
+	@./scripts/manage_migrations.sh upgrade
+
+migration-status: ## Show migration status
+	@echo "=== Migration Status ==="
+	@./scripts/manage_migrations.sh status
+
+migration-history: ## Show migration history
+	@echo "=== Migration History ==="
+	@./scripts/manage_migrations.sh history
+
+migration-downgrade: ## Roll back last migration (use with caution)
+	@echo "=== Rolling Back Migration ==="
+	@./scripts/manage_migrations.sh downgrade
 
 clean: ## Clean up artifacts directory
 	@echo "=== Cleaning artifacts ==="

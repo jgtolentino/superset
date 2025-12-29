@@ -36,6 +36,18 @@ npx playwright test
 
 **Note**: Setting metadata DB URI to Postgres creates a **fresh metadata database**. You must recreate admin users and reconnect data sources. This does NOT migrate existing SQLite metadata - it's a fresh start.
 
+### Dashboard Import & Management
+- **scripts/import_dashboard.py** - Import dashboards from JSON files
+- Bulk import from directories
+- REST API integration for automation
+- See [Dashboard Import Guide](docs/DASHBOARD_IMPORT.md)
+
+### Database Migrations
+- **scripts/manage_migrations.sh** - Flask-Migrate integration
+- Version-controlled schema changes
+- Safe migrations with rollback support
+- See [Migrations Guide](docs/MIGRATIONS.md)
+
 ### Automation Scripts
 - **scripts/bootstrap_examples_db.sh** - Idempotent database + dataset creation
 - **scripts/validate.sh** - Comprehensive health checks (7 validation steps including metadata DB engine check)
@@ -43,10 +55,13 @@ npx playwright test
 
 ### Production Configuration
 - **infra/docker/superset_config.py** - Production Superset config (Postgres metadata)
-- **.github/workflows/ci.yml** - CI with linting, security checks, Playwright tests
+- **.github/workflows/ci.yml** - CI with linting, security checks, Playwright tests, migration tests
 
 ### Documentation
 - **docs/README.md** - Complete deployment guide
+- **docs/DASHBOARD_IMPORT.md** - Dashboard import automation
+- **docs/MIGRATIONS.md** - Database migration management
+- **docs/N8N_INTEGRATION.md** - n8n workflow automation guide
 - All secrets stored as env vars (never hardcoded)
 - Evidence outputs in `artifacts/` directory
 
@@ -88,19 +103,32 @@ npx playwright test
 
 ```
 .
-├── scripts/               # Bootstrap + validate automation
-│   ├── bootstrap_examples_db.sh
-│   └── validate.sh
+├── scripts/                      # Automation scripts
+│   ├── bootstrap_examples_db.sh  # Database + dataset creation
+│   ├── validate.sh              # Validation suite
+│   ├── import_dashboard.py      # Dashboard import from JSON
+│   ├── manage_migrations.sh     # Database migration management
+│   └── require_env.sh           # Environment validation
 ├── infra/
-│   └── docker/           # Production Superset config
+│   └── docker/                  # Production Superset config
 │       └── superset_config.py
-├── playwright/           # Headless UI tests
+├── examples/
+│   └── dashboards/              # Sample dashboard JSON files
+│       ├── sample_dashboard.json
+│       └── README.md
+├── migrations_app.py            # Flask app for database migrations
+├── migrations/                  # Database migration scripts (created by init)
+├── playwright/                  # Headless UI tests
 │   └── smoke.spec.ts
-├── docs/                 # Deployment guide
-│   └── README.md
-├── .github/workflows/    # CI pipeline
+├── docs/                        # Documentation
+│   ├── README.md               # Deployment guide
+│   ├── DASHBOARD_IMPORT.md     # Dashboard import guide
+│   ├── MIGRATIONS.md           # Database migrations guide
+│   └── N8N_INTEGRATION.md      # n8n workflow automation
+├── .github/workflows/           # CI pipeline
 │   └── ci.yml
-└── artifacts/            # Test outputs (gitignored)
+├── requirements.txt             # Python dependencies
+└── artifacts/                   # Test outputs (gitignored)
 ```
 
 ## Environment Variables
