@@ -9,6 +9,7 @@ on:
         default: 'latest'
   push:
     branches:
+      - mains
       - main
     paths:
       - 'Dockerfile'
@@ -17,6 +18,7 @@ on:
       - '.github/workflows/image-build-scan.yml'
   pull_request:
     branches:
+      - mains
       - main
     paths:
       - 'Dockerfile'
@@ -76,7 +78,7 @@ jobs:
           images: ${{ env.IMAGE_REPO }}
           tags: |
             type=raw,value=${{ steps.tag.outputs.tag }}
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/mains' || github.ref == 'refs/heads/main' }}
             type=sha,prefix=sha-
 
       - name: Build image
@@ -134,7 +136,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Verify image (on push to main)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/mains' || github.ref == 'refs/heads/main')
         run: |
           docker pull ${{ env.IMAGE_REPO }}:${{ steps.tag.outputs.tag }}
           docker run --rm ${{ env.IMAGE_REPO }}:${{ steps.tag.outputs.tag }} python --version || echo "Python check skipped"
