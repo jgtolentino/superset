@@ -1,5 +1,80 @@
 # CLAUDE.md — Superset Repo Execution Rules
 
+## Repository Context (CRITICAL)
+
+This repository (`jgtolentino/superset`) is **INFRASTRUCTURE/CONFIG for Superset**, NOT the Superset Python package itself.
+
+### What This Means
+
+```
+jgtolentino/superset/           <- This repo (infra/config)
+├── infra/do/                   <- DigitalOcean deployment specs
+├── infra/superset/             <- Superset config & Dockerfile
+├── scripts/                    <- Automation scripts
+├── examples/                   <- Dashboard examples
+└── docs/                       <- Documentation
+
+apache/superset/                <- Actual Superset code (NOT this repo)
+├── superset/                   <- Python package
+├── superset-frontend/          <- React frontend
+├── setup.py                    <- Package definition
+└── pyproject.toml              <- Build config
+```
+
+### DO NOT
+
+- **DO NOT** run `pip install -e .` at repo root — will fail with "not a Python project"
+- **DO NOT** try to modify Superset core code here
+- **DO NOT** assume this has `setup.py` or `pyproject.toml`
+
+### DO
+
+- **DO** install Superset from PyPI: `pip install apache-superset==4.0.1`
+- **DO** use this repo for deployment configs, scripts, and examples
+- **DO** reference the actual Superset docs at https://superset.apache.org
+
+---
+
+## Claude Code Web / Codex Web Setup
+
+### Environment Setup Script
+
+For cloud-based AI coding environments (Claude Code Web, Codex, GitHub Codespaces):
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd /workspace/superset
+
+# Python environment
+python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip wheel setuptools
+
+# Install Superset from PyPI (NOT this repo)
+pip install "apache-superset==4.0.1"
+
+# Repo-specific dependencies
+if [ -f "requirements.txt" ]; then
+  pip install -r requirements.txt
+fi
+
+# Optional: Playwright for E2E tests
+if [ -f "playwright.config.ts" ]; then
+  npm install
+  npx playwright install chromium
+fi
+```
+
+### See Also
+
+- `.codex/setup.sh` — Full Codex cloud environment setup script
+- `.codex/config.toml` — Local Codex CLI configuration template
+- `.codex/AGENTS.md` — Detailed agent instructions
+
+---
+
 ## Credential Handling (STRICT)
 
 - **Never invent credentials** (no fake usernames/passwords)
