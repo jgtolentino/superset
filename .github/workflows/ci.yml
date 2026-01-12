@@ -200,3 +200,222 @@ jobs:
           name: playwright-screenshots
           path: artifacts/
           retention-days: 7
+
+  # ============================================
+  # Scout Retail Intelligence Deployment
+  # ============================================
+  scout-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Validate Scout SQL views
+        run: |
+          echo "Validating Scout SQL views..."
+          if [ ! -f "sql/scout_views/V002__create_scout_retail_views.sql" ]; then
+            echo "❌ Scout views SQL not found"
+            exit 1
+          fi
+
+          # Check for all 12 expected views
+          EXPECTED_VIEWS=(
+            "dim_store" "dim_product" "dim_time" "dim_geography"
+            "bi_fact_transactions" "bi_transaction_summary_daily"
+            "bi_product_performance" "bi_customer_segments"
+            "bi_store_performance" "bi_competitive_analysis"
+            "bi_hourly_patterns" "bi_basket_analysis"
+          )
+
+          for view in "${EXPECTED_VIEWS[@]}"; do
+            if grep -q "CREATE OR REPLACE VIEW public.$view" sql/scout_views/V002__create_scout_retail_views.sql; then
+              echo "  ✓ Found view: $view"
+            else
+              echo "  ✗ Missing view: $view"
+              exit 1
+            fi
+          done
+          echo "✅ All 12 Scout views present"
+
+      - name: Validate Scout datasets YAML
+        run: |
+          python3 -c "
+          import yaml
+          with open('config/scout_retail_datasets.yaml', 'r') as f:
+              data = yaml.safe_load(f)
+              datasets = data.get('datasets', [])
+              print(f'Found {len(datasets)} datasets')
+              assert len(datasets) >= 6, 'Expected at least 6 datasets'
+              for ds in datasets:
+                  print(f'  ✓ {ds.get(\"dataset_id\", \"unknown\")}')
+          print('✅ Scout datasets YAML validated')
+          "
+
+      - name: Validate Scout dashboard JSON
+        run: |
+          python3 -c "
+          import json
+          with open('examples/dashboards/scout_retail_intelligence.json', 'r') as f:
+              data = json.load(f)
+              title = data.get('dashboard_title', '')
+              print(f'Dashboard: {title}')
+              assert 'Scout' in title, 'Dashboard title should contain Scout'
+              filters = data.get('metadata', {}).get('native_filter_configuration', [])
+              print(f'Filters: {len(filters)}')
+          print('✅ Scout dashboard JSON validated')
+          "
+
+  scout-test-views:
+    runs-on: ubuntu-latest
+    needs: [scout-validate]
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: scout_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Create scout_transactions table
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d scout_test -c "
+            CREATE TABLE scout_transactions (
+              id VARCHAR(20) PRIMARY KEY,
+              store_id VARCHAR(20) NOT NULL,
+              timestamp TIMESTAMPTZ NOT NULL,
+              time_of_day VARCHAR(20) NOT NULL,
+              location JSONB NOT NULL,
+              product_category VARCHAR(100) NOT NULL,
+              brand_name VARCHAR(200) NOT NULL,
+              sku VARCHAR(300) NOT NULL,
+              units_per_transaction INTEGER NOT NULL,
+              peso_value NUMERIC(10,2) NOT NULL,
+              basket_size INTEGER NOT NULL,
+              combo_basket JSONB NOT NULL DEFAULT '[]',
+              request_mode VARCHAR(20) NOT NULL,
+              request_type VARCHAR(20) NOT NULL,
+              suggestion_accepted BOOLEAN NOT NULL,
+              gender VARCHAR(10) NOT NULL,
+              age_bracket VARCHAR(10) NOT NULL,
+              customer_type VARCHAR(20) NOT NULL,
+              economic_class VARCHAR(10) NOT NULL,
+              duration_seconds INTEGER NOT NULL,
+              handshake_score NUMERIC(3,2) NOT NULL,
+              payment_method VARCHAR(20) NOT NULL,
+              store_type VARCHAR(20) NOT NULL,
+              campaign_influenced BOOLEAN NOT NULL,
+              is_tbwa_client BOOLEAN NOT NULL,
+              substitution_event JSONB NOT NULL DEFAULT '{\"occurred\": false}'
+            );
+          "
+
+      - name: Insert test data
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d scout_test -c "
+            INSERT INTO scout_transactions VALUES (
+              'TXN00000001', 'ST000001', NOW(), 'morning',
+              '{\"region\": \"NCR\", \"province\": \"Metro Manila\", \"city\": \"Quezon City\", \"barangay\": \"Brgy_23\"}'::JSONB,
+              'Snacks', 'Oishi', 'Oishi Prawn Crackers 30g', 2, 25.00, 1, '[]'::JSONB,
+              'verbal', 'branded', true, 'male', '25-34', 'regular', 'C',
+              45, 0.85, 'cash', 'urban_high', false, true,
+              '{\"occurred\": false}'::JSONB
+            );
+          "
+
+      - name: Apply Scout retail views
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d scout_test \
+            -v ON_ERROR_STOP=1 \
+            -f sql/scout_views/V002__create_scout_retail_views.sql
+
+      - name: Verify all views created
+        env:
+          PGPASSWORD: postgres
+        run: |
+          VIEW_COUNT=$(psql -h localhost -U postgres -d scout_test -t -c "
+            SELECT COUNT(*) FROM information_schema.views
+            WHERE table_schema = 'public'
+            AND (table_name LIKE 'bi_%' OR table_name LIKE 'dim_%');
+          " | tr -d ' ')
+
+          if [ "$VIEW_COUNT" -eq 12 ]; then
+            echo "✅ All 12 Scout views created"
+          else
+            echo "❌ Expected 12 views, found $VIEW_COUNT"
+            exit 1
+          fi
+
+      - name: Test view queries
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d scout_test -c "SELECT COUNT(*) AS fact_rows FROM bi_fact_transactions;"
+          psql -h localhost -U postgres -d scout_test -c "SELECT COUNT(*) AS store_rows FROM bi_store_performance;"
+          psql -h localhost -U postgres -d scout_test -c "SELECT COUNT(*) AS comp_rows FROM bi_competitive_analysis;"
+          echo "✅ View queries successful"
+
+  scout-deploy:
+    runs-on: ubuntu-latest
+    needs: [scout-test-views]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy Scout views to Supabase
+        if: ${{ secrets.SCOUT_DB_URI != '' }}
+        env:
+          SCOUT_DB_URI: ${{ secrets.SCOUT_DB_URI }}
+        run: |
+          echo "Deploying Scout views to production database..."
+          psql "$SCOUT_DB_URI" -v ON_ERROR_STOP=1 \
+            -f sql/scout_views/V002__create_scout_retail_views.sql
+          echo "✅ Scout views deployed"
+
+      - name: Superset health check
+        if: ${{ secrets.BASE_URL != '' }}
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+        run: |
+          curl -sf "${BASE_URL}/health" && echo "✅ Superset healthy" || echo "⚠️  Health check skipped"
+
+      - name: Deployment instructions
+        run: |
+          echo "═══════════════════════════════════════════════════════════════"
+          echo "  Scout Retail Intelligence - Post-Deployment Steps"
+          echo "═══════════════════════════════════════════════════════════════"
+          echo ""
+          echo "  1. Import datasets into Superset:"
+          echo "     docker exec superset superset import-datasources \\"
+          echo "       -p /app/config/scout_retail_datasets.yaml --overwrite"
+          echo ""
+          echo "  2. Import dashboard:"
+          echo "     docker exec superset superset import-dashboards \\"
+          echo "       -p /app/examples/dashboards/scout_retail_intelligence.json --overwrite"
+          echo ""
+          echo "  3. Or run the deployment script:"
+          echo "     ./scripts/scout/deploy_scout.sh --all"
+          echo ""
+          echo "═══════════════════════════════════════════════════════════════"
