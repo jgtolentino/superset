@@ -1,0 +1,87 @@
+# =============================================================================
+# Codex CLI Configuration Template
+# Repository: jgtolentino/superset
+# =============================================================================
+#
+# This file is a TEMPLATE for local Codex CLI configuration.
+# Copy to ~/.codex/config.toml for global settings, or keep here for repo-specific.
+#
+# See: https://developers.openai.com/codex/config-basic/
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Model Configuration
+# -----------------------------------------------------------------------------
+model = "gpt-5.2-codex"
+review_model = "gpt-5.2-codex"
+model_provider = "openai"
+
+# Reasoning effort: "low", "medium", "high"
+model_reasoning_effort = "medium"
+
+# Reasoning summary: "auto", "always", "never"
+model_reasoning_summary = "auto"
+
+# Output verbosity: "quiet", "low", "medium", "high"
+model_verbosity = "medium"
+
+# -----------------------------------------------------------------------------
+# Project Settings
+# -----------------------------------------------------------------------------
+# File opener for IDE integration: "vscode", "cursor", "vim", etc.
+file_opener = "vscode"
+
+# Approval policy: "auto", "on-request", "always"
+# - auto: Auto-approve safe operations
+# - on-request: Ask for approval when needed
+# - always: Always ask for approval
+approval_policy = "on-request"
+
+# Sandbox mode: "read-only", "read-write", "none"
+# - read-only: Can read files, execute safe commands
+# - read-write: Full file system access
+# - none: No sandboxing (dangerous)
+sandbox_mode = "read-only"
+
+# -----------------------------------------------------------------------------
+# Feature Flags
+# -----------------------------------------------------------------------------
+[features]
+# Enable shell tool for command execution
+shell_tool = true
+
+# Web search capabilities
+web_search_request = false
+
+# Unified execution environment
+unified_exec = false
+
+# -----------------------------------------------------------------------------
+# MCP Servers (Model Context Protocol)
+# -----------------------------------------------------------------------------
+# Uncomment and configure as needed for integrations
+
+# [mcp_servers.github]
+# enabled = true
+# url = "https://github-mcp.example.com/mcp"
+# bearer_token_env_var = "GITHUB_TOKEN"
+
+# [mcp_servers.superset]
+# enabled = true
+# url = "https://superset.insightpulseai.net/mcp"
+# bearer_token_env_var = "SUPERSET_API_TOKEN"
+
+# -----------------------------------------------------------------------------
+# Repository-Specific Context
+# -----------------------------------------------------------------------------
+# This repo is Superset INFRASTRUCTURE, not the Superset app itself.
+# Key directories:
+#   - infra/do/         DigitalOcean deployment specs
+#   - infra/superset/   Superset config & Dockerfile
+#   - scripts/          Automation & utility scripts
+#   - examples/         Dashboard & dataset examples
+#   - docs/             Documentation
+#
+# DO NOT try to run `pip install -e .` at repo root.
+# Superset is installed from PyPI: pip install apache-superset
+# -----------------------------------------------------------------------------

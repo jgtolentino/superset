@@ -1,0 +1,23 @@
+# Tableau LangChain Integration Dependencies
+# Install: pip install -r .claude/skills/tableau-langchain/requirements.txt
+
+# Core LangChain packages
+langchain>=0.2.0
+langgraph>=0.2.0
+
+# Tableau integration
+langchain-tableau>=0.4.0
+
+# LLM providers (install at least one)
+langchain-openai>=0.1.0      # For OpenAI/GPT models
+langchain-anthropic>=0.1.0   # For Claude models
+
+# Data processing
+pandas>=2.0.0
+
+# Database connectivity (for Superset integration)
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+
+# HTTP client
+requests>=2.31.0

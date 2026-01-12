@@ -1,0 +1,401 @@
+# =============================================================================
+# Tableau Reverse Engineering Skills - Definitions
+# =============================================================================
+# These skills enable reverse-engineering Tableau dashboards into Superset
+# and Odoo 18 CE + OCA compatible templates.
+# =============================================================================
+
+skills:
+  # ===========================================================================
+  # SKILL 1: Fetch Tableau Gallery Index
+  # ===========================================================================
+  - name: fetch_tableau_gallery_index
+    intent: "Scrape Tableau Public gallery pages to extract dashboard listings"
+    inputs:
+      - name: gallery_url
+        type: string
+        required: true
+        description: "Tableau Public gallery URL (e.g., business-dashboards)"
+      - name: max_results
+        type: integer
+        required: false
+        default: 50
+        description: "Maximum number of dashboards to fetch"
+      - name: category_filter
+        type: string
+        required: false
+        description: "Filter by category (sales, finance, operations, etc.)"
+    outputs:
+      - name: dashboards
+        type: array
+        items:
+          - name: title
+            type: string
+          - name: url
+            type: string
+          - name: author
+            type: string
+          - name: tags
+            type: array
+          - name: thumbnail_url
+            type: string
+          - name: view_count
+            type: integer
+          - name: workbook_id
+            type: string
+    backend: http
+    handler: "python://skills/tableau-reverse-engineer/fetch_gallery.py"
+
+  # ===========================================================================
+  # SKILL 2: Download Tableau Workbook
+  # ===========================================================================
+  - name: download_tableau_workbook
+    intent: "Download a Tableau workbook (.twb or .twbx) from Tableau Public URL"
+    inputs:
+      - name: dashboard_url
+        type: string
+        required: true
+        description: "Tableau Public dashboard URL"
+      - name: output_dir
+        type: string
+        required: false
+        default: "./workbooks"
+        description: "Directory to save downloaded workbook"
+      - name: format
+        type: string
+        required: false
+        default: "twbx"
+        description: "Preferred format (twb or twbx)"
+    outputs:
+      - name: workbook_path
+        type: string
+        description: "Local file path to downloaded workbook"
+      - name: workbook_format
+        type: string
+        description: "File format (twb or twbx)"
+      - name: metadata
+        type: object
+        properties:
+          - name: title
+            type: string
+          - name: author
+            type: string
+          - name: created_at
+            type: string
+          - name: updated_at
+            type: string
+          - name: file_size_bytes
+            type: integer
+    backend: http
+    handler: "python://skills/tableau-reverse-engineer/download_workbook.py"
+
+  # ===========================================================================
+  # SKILL 3: Parse Tableau Semantic Model
+  # ===========================================================================
+  - name: parse_tableau_semantic_model
+    intent: "Extract semantic model from Tableau workbook (tables, measures, visuals)"
+    inputs:
+      - name: workbook_path
+        type: string
+        required: true
+        description: "Path to .twb or .twbx file"
+      - name: include_raw_xml
+        type: boolean
+        required: false
+        default: false
+        description: "Include raw XML snippets in output"
+    outputs:
+      - name: semantic_model
+        type: object
+        properties:
+          - name: datasources
+            type: array
+            description: "Data source connections"
+          - name: tables
+            type: array
+            description: "Tables with columns and types"
+          - name: relationships
+            type: array
+            description: "Table relationships/joins"
+          - name: measures
+            type: array
+            description: "Calculated fields and measures"
+          - name: parameters
+            type: array
+            description: "Dashboard parameters"
+          - name: visuals
+            type: array
+            description: "Worksheets/visuals with field mappings"
+          - name: filters
+            type: array
+            description: "Global and visual-level filters"
+          - name: dashboards
+            type: array
+            description: "Dashboard layouts and compositions"
+    backend: tableaureader
+    handler: "python://skills/tableau-reverse-engineer/parse_semantic.py"
+
+  # ===========================================================================
+  # SKILL 4: Map Tableau to Odoo Models
+  # ===========================================================================
+  - name: map_tableau_to_odoo_models
+    intent: "Map Tableau semantic model entities to Odoo 18 CE + OCA data models"
+    inputs:
+      - name: semantic_model
+        type: object
+        required: true
+        description: "Parsed Tableau semantic model"
+      - name: domain_hint
+        type: string
+        required: false
+        description: "Business domain hint (sales, finance, inventory, crm)"
+      - name: custom_mappings
+        type: object
+        required: false
+        description: "Override default entity-to-model mappings"
+    outputs:
+      - name: odoo_mapping
+        type: object
+        properties:
+          - name: entity_mappings
+            type: array
+            description: "Tableau entity → Odoo model mappings"
+          - name: field_mappings
+            type: array
+            description: "Field-level mappings"
+          - name: kpi_expressions
+            type: array
+            description: "KPIs expressed in Odoo field terms"
+          - name: suggested_views
+            type: array
+            description: "Recommended bi_* views for Superset"
+          - name: assumptions
+            type: array
+            description: "Mapping assumptions made"
+    backend: semantic
+    handler: "python://skills/tableau-reverse-engineer/map_to_odoo.py"
+
+  # ===========================================================================
+  # SKILL 5: Generate Superset Templates
+  # ===========================================================================
+  - name: generate_superset_templates_from_semantics
+    intent: "Generate Superset dataset and dashboard templates from semantic mapping"
+    inputs:
+      - name: odoo_mapping
+        type: object
+        required: true
+        description: "Odoo model mapping from map_tableau_to_odoo_models"
+      - name: semantic_model
+        type: object
+        required: true
+        description: "Original Tableau semantic model"
+      - name: dashboard_title
+        type: string
+        required: false
+        description: "Override dashboard title"
+      - name: database_name
+        type: string
+        required: false
+        default: "odoo_warehouse"
+        description: "Superset database connection name"
+    outputs:
+      - name: superset_template
+        type: object
+        properties:
+          - name: datasets
+            type: array
+            description: "Dataset definitions (SQL, columns, metrics)"
+          - name: charts
+            type: array
+            description: "Chart configurations"
+          - name: dashboard
+            type: object
+            description: "Dashboard layout and metadata"
+          - name: filters
+            type: array
+            description: "Native filter configurations"
+    backend: superset
+    handler: "python://skills/tableau-reverse-engineer/generate_superset.py"
+
+  # ===========================================================================
+  # SKILL 6: Generate Workflow Automation Template
+  # ===========================================================================
+  - name: generate_workflow_automation_template
+    intent: "Generate Odoo 18 CE/OCA workflow automation templates (cron, server actions)"
+    inputs:
+      - name: odoo_mapping
+        type: object
+        required: true
+        description: "Odoo model mapping"
+      - name: kpis
+        type: array
+        required: true
+        description: "KPI definitions to automate"
+      - name: automation_type
+        type: string
+        required: false
+        default: "all"
+        description: "Type: cron, on_change, all"
+    outputs:
+      - name: workflow_template
+        type: object
+        properties:
+          - name: server_actions
+            type: array
+            description: "Odoo ir.actions.server definitions"
+          - name: cron_jobs
+            type: array
+            description: "Odoo ir.cron scheduled jobs"
+          - name: automated_actions
+            type: array
+            description: "Odoo base.automation rules"
+          - name: bi_snapshot_models
+            type: array
+            description: "bi_* snapshot model definitions"
+          - name: n8n_workflows
+            type: array
+            description: "n8n workflow JSON templates"
+    backend: odoo
+    handler: "python://skills/tableau-reverse-engineer/generate_workflow.py"
+
+  # ===========================================================================
+  # SKILL 7: Export Superset Bundle
+  # ===========================================================================
+  - name: export_superset_bundle
+    intent: "Package Superset templates into importable ZIP bundle"
+    inputs:
+      - name: superset_template
+        type: object
+        required: true
+        description: "Superset template from generate_superset_templates"
+      - name: output_dir
+        type: string
+        required: false
+        default: "./superset_exports"
+        description: "Output directory for bundle"
+      - name: bundle_name
+        type: string
+        required: false
+        description: "Bundle filename (auto-generated if not provided)"
+      - name: include_data_samples
+        type: boolean
+        required: false
+        default: false
+        description: "Include sample data in export"
+    outputs:
+      - name: bundle_path
+        type: string
+        description: "Path to exported ZIP bundle"
+      - name: manifest
+        type: object
+        description: "Bundle manifest with contents"
+      - name: import_instructions
+        type: string
+        description: "Instructions for importing into Superset"
+    backend: superset
+    handler: "python://skills/tableau-reverse-engineer/export_bundle.py"
+
+# =============================================================================
+# WORKFLOW PIPELINE DEFINITION
+# =============================================================================
+workflows:
+  - workflow_id: tableau_to_superset_odoo_pipeline
+    description: "Reverse-engineer Tableau dashboards into Superset + Odoo CE/OCA 18 templates"
+    version: "1.0.0"
+
+    inputs:
+      - name: gallery_url
+        type: string
+        required: false
+        description: "Tableau Public gallery URL (for discovery mode)"
+      - name: dashboard_url
+        type: string
+        required: false
+        description: "Direct dashboard URL (for single dashboard mode)"
+      - name: workbook_path
+        type: string
+        required: false
+        description: "Local workbook path (for file mode)"
+      - name: output_dir
+        type: string
+        required: true
+        default: "./output"
+        description: "Output directory for generated artifacts"
+
+    steps:
+      # Step 1: Fetch gallery index (optional - for discovery mode)
+      - id: fetch_index
+        skill: fetch_tableau_gallery_index
+        condition: "${inputs.gallery_url != null}"
+        input:
+          gallery_url: "${inputs.gallery_url}"
+          max_results: 20
+        output:
+          dashboards: "${result.dashboards}"
+
+      # Step 2: Download workbook (skip if local path provided)
+      - id: download_workbook
+        skill: download_tableau_workbook
+        condition: "${inputs.workbook_path == null}"
+        input:
+          dashboard_url: "${inputs.dashboard_url || select_from(fetch_index.dashboards)}"
+          output_dir: "${inputs.output_dir}/workbooks"
+        output:
+          workbook_path: "${result.workbook_path}"
+          metadata: "${result.metadata}"
+
+      # Step 3: Parse semantic model
+      - id: parse_semantics
+        skill: parse_tableau_semantic_model
+        input:
+          workbook_path: "${inputs.workbook_path || download_workbook.workbook_path}"
+        output:
+          semantic_model: "${result.semantic_model}"
+
+      # Step 4: Map to Odoo models
+      - id: map_to_odoo
+        skill: map_tableau_to_odoo_models
+        input:
+          semantic_model: "${parse_semantics.semantic_model}"
+        output:
+          odoo_mapping: "${result.odoo_mapping}"
+
+      # Step 5: Generate Superset templates
+      - id: superset_templates
+        skill: generate_superset_templates_from_semantics
+        input:
+          odoo_mapping: "${map_to_odoo.odoo_mapping}"
+          semantic_model: "${parse_semantics.semantic_model}"
+        output:
+          superset_template: "${result.superset_template}"
+
+      # Step 6: Generate workflow automation
+      - id: workflow_template
+        skill: generate_workflow_automation_template
+        input:
+          odoo_mapping: "${map_to_odoo.odoo_mapping}"
+          kpis: "${parse_semantics.semantic_model.measures}"
+        output:
+          workflow_template: "${result.workflow_template}"
+
+      # Step 7: Export Superset bundle
+      - id: export_bundle
+        skill: export_superset_bundle
+        input:
+          superset_template: "${superset_templates.superset_template}"
+          output_dir: "${inputs.output_dir}/superset_bundles"
+        output:
+          bundle_path: "${result.bundle_path}"
+          manifest: "${result.manifest}"
+
+    outputs:
+      - name: semantic_model
+        value: "${parse_semantics.semantic_model}"
+      - name: odoo_mapping
+        value: "${map_to_odoo.odoo_mapping}"
+      - name: superset_template
+        value: "${superset_templates.superset_template}"
+      - name: workflow_template
+        value: "${workflow_template.workflow_template}"
+      - name: bundle_path
+        value: "${export_bundle.bundle_path}"
