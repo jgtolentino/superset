@@ -1,0 +1,166 @@
+{
+  "dashboard_title": "Scout - Retail Intelligence Dashboard",
+  "description": "TBWA\\SMP Suqi Analytics platform for Philippine retail (sari-sari store) transaction intelligence, consumer behavior analysis, and competitive insights.",
+  "css": ".scout-kpi-row { margin-bottom: 16px; } .scout-header { font-weight: 600; color: #1a1a2e; } .tbwa-orange { color: #FF6B00; }",
+  "slug": "scout-retail-intelligence",
+  "published": true,
+  "position_json": "{\"DASHBOARD_VERSION_KEY\":\"v2\",\"DASHBOARD_ROOT_ID\":{\"type\":\"ROOT\",\"id\":\"ROOT_ID\",\"children\":[\"TABS-scout\"]},\"TABS-scout\":{\"type\":\"TABS\",\"id\":\"TABS-scout\",\"children\":[\"TAB-txn-trends\",\"TAB-product-mix\",\"TAB-consumer-behavior\",\"TAB-consumer-profiling\",\"TAB-competitive\",\"TAB-geo\"],\"meta\":{}},\"TAB-txn-trends\":{\"type\":\"TAB\",\"id\":\"TAB-txn-trends\",\"children\":[\"ROW-txn-kpi\",\"ROW-txn-chart\",\"ROW-txn-time\"],\"meta\":{\"text\":\"Transaction Trends\"}},\"TAB-product-mix\":{\"type\":\"TAB\",\"id\":\"TAB-product-mix\",\"children\":[\"ROW-prod-kpi\",\"ROW-prod-chart\"],\"meta\":{\"text\":\"Product Mix & SKU\"}},\"TAB-consumer-behavior\":{\"type\":\"TAB\",\"id\":\"TAB-consumer-behavior\",\"children\":[\"ROW-behav-kpi\",\"ROW-behav-chart\"],\"meta\":{\"text\":\"Consumer Behavior\"}},\"TAB-consumer-profiling\":{\"type\":\"TAB\",\"id\":\"TAB-consumer-profiling\",\"children\":[\"ROW-prof-kpi\",\"ROW-prof-chart\"],\"meta\":{\"text\":\"Consumer Profiling\"}},\"TAB-competitive\":{\"type\":\"TAB\",\"id\":\"TAB-competitive\",\"children\":[\"ROW-comp-kpi\",\"ROW-comp-chart\"],\"meta\":{\"text\":\"Competitive Analysis\"}},\"TAB-geo\":{\"type\":\"TAB\",\"id\":\"TAB-geo\",\"children\":[\"ROW-geo-kpi\",\"ROW-geo-chart\",\"ROW-geo-table\"],\"meta\":{\"text\":\"Geographical Intelligence\"}}}",
+  "metadata": {
+    "native_filter_configuration": [
+      {
+        "id": "filter_date_range",
+        "name": "Date Range",
+        "filterType": "filter_time",
+        "targets": [{"datasetId": null, "column": {"name": "transaction_date"}}],
+        "defaultDataMask": {"filterState": {"value": "Last 30 days"}},
+        "cascadeParentIds": [],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {}
+      },
+      {
+        "id": "filter_region",
+        "name": "Region",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "region"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": [],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "multiSelect": true,
+          "searchAllOptions": true,
+          "sortAscending": true
+        }
+      },
+      {
+        "id": "filter_city",
+        "name": "City",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "city"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": ["filter_region"],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "multiSelect": true,
+          "searchAllOptions": true
+        }
+      },
+      {
+        "id": "filter_store_type",
+        "name": "Store Type",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "store_type"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": [],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "multiSelect": true
+        }
+      },
+      {
+        "id": "filter_category",
+        "name": "Product Category",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "product_category"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": [],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "multiSelect": true,
+          "sortAscending": true
+        }
+      },
+      {
+        "id": "filter_brand",
+        "name": "Brand",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "brand_name"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": ["filter_category"],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "multiSelect": true,
+          "searchAllOptions": true
+        }
+      },
+      {
+        "id": "filter_brand_type",
+        "name": "Brand Type",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "brand_type"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": [],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "multiSelect": true
+        }
+      },
+      {
+        "id": "filter_gender",
+        "name": "Gender",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "gender"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": [],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "multiSelect": true
+        }
+      },
+      {
+        "id": "filter_age_bracket",
+        "name": "Age Bracket",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "age_bracket"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": [],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "multiSelect": true,
+          "sortAscending": true
+        }
+      },
+      {
+        "id": "filter_economic_class",
+        "name": "Economic Class",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "economic_class"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": [],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "multiSelect": true
+        }
+      }
+    ],
+    "chart_configuration": {},
+    "filter_scopes": {},
+    "expanded_slices": {},
+    "refresh_frequency": 300,
+    "default_filters": "{}",
+    "color_scheme": "supersetColors",
+    "label_colors": {
+      "TBWA Client": "#FF6B00",
+      "Competitor": "#666666",
+      "Urban": "#2196F3",
+      "Suburban": "#4CAF50",
+      "Rural": "#FF9800",
+      "Transit": "#9C27B0"
+    },
+    "shared_label_colors": {},
+    "cross_filters_enabled": true,
+    "timed_refresh_immune_slices": []
+  },
+  "slices": [],
+  "certification_details": "TBWA\\SMP Suqi Analytics - Scout Dashboard v2.0",
+  "certified_by": "Scout Team",
+  "is_managed_externally": false
+}

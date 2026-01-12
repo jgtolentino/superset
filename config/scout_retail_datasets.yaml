@@ -1,0 +1,686 @@
+# Scout Retail Intelligence - Superset Dataset Configuration
+#
+# Platform: TBWA\SMP Suqi Analytics - Retail Intelligence
+# Source: scout_transactions table (Odoo ipai.scout_transaction)
+# Version: 2.0
+# Generated: 2026-01-12
+
+datasets:
+  # ===========================================
+  # Main Fact Dataset - Retail Transactions
+  # ===========================================
+  - dataset_id: bi_fact_transactions
+    table: bi_fact_transactions
+    schema: public
+    description: "Core Scout dataset - individual sari-sari store transactions with all dimensions"
+
+    metrics:
+      - name: transaction_count
+        label: "Transaction Count"
+        sql_expression: "COUNT(*)"
+        type: "count"
+        description: "Total number of transactions"
+
+      - name: total_revenue
+        label: "Total Revenue (₱)"
+        sql_expression: "SUM(peso_value)"
+        type: "sum"
+        description: "Total transaction value in Philippine Peso"
+
+      - name: total_units
+        label: "Total Units"
+        sql_expression: "SUM(units_per_transaction)"
+        type: "sum"
+        description: "Total product units sold"
+
+      - name: avg_transaction_value
+        label: "Avg Transaction Value (₱)"
+        sql_expression: "AVG(peso_value)"
+        type: "avg"
+        description: "Average transaction value"
+
+      - name: avg_basket_size
+        label: "Avg Basket Size"
+        sql_expression: "AVG(basket_size)"
+        type: "avg"
+        description: "Average number of unique SKUs per transaction"
+
+      - name: avg_duration
+        label: "Avg Duration (sec)"
+        sql_expression: "AVG(duration_seconds)"
+        type: "avg"
+        description: "Average transaction duration in seconds"
+
+      - name: avg_handshake_score
+        label: "Avg Engagement Score"
+        sql_expression: "AVG(handshake_score)"
+        type: "avg"
+        description: "Average customer engagement score (0-1)"
+
+      - name: suggestion_acceptance_rate
+        label: "Suggestion Accept Rate (%)"
+        sql_expression: "AVG(CASE WHEN suggestion_accepted THEN 1.0 ELSE 0.0 END) * 100"
+        type: "ratio"
+        description: "Percentage of transactions where customer accepted suggestion"
+
+      - name: brand_loyalty_rate
+        label: "Brand Loyalty (%)"
+        sql_expression: "COUNT(CASE WHEN request_type = 'branded' THEN 1 END)::FLOAT / NULLIF(COUNT(*), 0) * 100"
+        type: "ratio"
+        description: "Percentage of branded product requests"
+
+      - name: discovery_rate
+        label: "Discovery Rate (%)"
+        sql_expression: "COUNT(CASE WHEN request_type = 'indirect' THEN 1 END)::FLOAT / NULLIF(COUNT(*), 0) * 100"
+        type: "ratio"
+        description: "Percentage of indirect/discovery purchases"
+
+      - name: tbwa_market_share
+        label: "TBWA Market Share (%)"
+        sql_expression: "SUM(CASE WHEN is_tbwa_client THEN peso_value ELSE 0 END)::FLOAT / NULLIF(SUM(peso_value), 0) * 100"
+        type: "ratio"
+        description: "TBWA client brand revenue share"
+
+      - name: unique_stores
+        label: "Active Stores"
+        sql_expression: "COUNT(DISTINCT store_id)"
+        type: "count_distinct"
+        description: "Number of unique stores with transactions"
+
+      - name: unique_skus
+        label: "Active SKUs"
+        sql_expression: "COUNT(DISTINCT sku)"
+        type: "count_distinct"
+        description: "Number of unique products sold"
+
+      - name: unique_brands
+        label: "Active Brands"
+        sql_expression: "COUNT(DISTINCT brand_name)"
+        type: "count_distinct"
+        description: "Number of unique brands"
+
+      - name: digital_payment_rate
+        label: "Digital Payment Rate (%)"
+        sql_expression: "COUNT(CASE WHEN is_digital_payment THEN 1 END)::FLOAT / NULLIF(COUNT(*), 0) * 100"
+        type: "ratio"
+        description: "Percentage using GCash/Maya"
+
+      - name: substitution_rate
+        label: "Substitution Rate (%)"
+        sql_expression: "COUNT(CASE WHEN substitution_occurred THEN 1 END)::FLOAT / NULLIF(COUNT(*), 0) * 100"
+        type: "ratio"
+        description: "Percentage of substitution events"
+
+      - name: male_customers
+        label: "Male Customers"
+        sql_expression: "COUNT(CASE WHEN gender = 'male' THEN 1 END)"
+        type: "count"
+
+      - name: female_customers
+        label: "Female Customers"
+        sql_expression: "COUNT(CASE WHEN gender = 'female' THEN 1 END)"
+        type: "count"
+
+      - name: urban_customers_pct
+        label: "Urban Customers (%)"
+        sql_expression: "COUNT(CASE WHEN store_category = 'Urban' THEN 1 END)::FLOAT / NULLIF(COUNT(*), 0) * 100"
+        type: "ratio"
+
+      - name: repeat_customers_pct
+        label: "Repeat Customers (%)"
+        sql_expression: "COUNT(CASE WHEN is_repeat_customer THEN 1 END)::FLOAT / NULLIF(COUNT(*), 0) * 100"
+        type: "ratio"
+
+    columns:
+      # Time dimensions
+      - name: transaction_date
+        verbose_name: "Date"
+        is_dimension: false
+        is_time: true
+        description: "Transaction date"
+
+      - name: timestamp
+        verbose_name: "Timestamp"
+        is_dimension: false
+        is_time: true
+        description: "Full transaction timestamp"
+
+      - name: time_of_day
+        verbose_name: "Time of Day"
+        is_dimension: true
+        is_time: false
+        description: "morning, afternoon, evening, night"
+
+      - name: hour_of_day
+        verbose_name: "Hour"
+        is_dimension: true
+        is_time: false
+
+      - name: year
+        verbose_name: "Year"
+        is_dimension: true
+        is_time: false
+
+      - name: quarter
+        verbose_name: "Quarter"
+        is_dimension: true
+        is_time: false
+
+      - name: month
+        verbose_name: "Month"
+        is_dimension: true
+        is_time: false
+
+      - name: month_name
+        verbose_name: "Month Name"
+        is_dimension: true
+        is_time: false
+
+      - name: week
+        verbose_name: "Week"
+        is_dimension: true
+        is_time: false
+
+      - name: day_of_week
+        verbose_name: "Day of Week"
+        is_dimension: true
+        is_time: false
+
+      - name: day_name
+        verbose_name: "Day Name"
+        is_dimension: true
+        is_time: false
+
+      - name: is_weekend
+        verbose_name: "Is Weekend"
+        is_dimension: true
+        is_time: false
+
+      # Geography dimensions
+      - name: region
+        verbose_name: "Region"
+        is_dimension: true
+        is_time: false
+        description: "Philippine region (NCR, CALABARZON, etc.)"
+
+      - name: province
+        verbose_name: "Province"
+        is_dimension: true
+        is_time: false
+
+      - name: city
+        verbose_name: "City"
+        is_dimension: true
+        is_time: false
+
+      - name: barangay
+        verbose_name: "Barangay"
+        is_dimension: true
+        is_time: false
+
+      # Store dimensions
+      - name: store_id
+        verbose_name: "Store ID"
+        is_dimension: true
+        is_time: false
+
+      - name: store_type
+        verbose_name: "Store Type"
+        is_dimension: true
+        is_time: false
+        description: "urban_high, urban_medium, residential, rural, transport"
+
+      - name: store_category
+        verbose_name: "Store Category"
+        is_dimension: true
+        is_time: false
+        description: "Urban, Suburban, Rural, Transit"
+
+      - name: economic_class
+        verbose_name: "Economic Class"
+        is_dimension: true
+        is_time: false
+        description: "A, B, C, D, E socioeconomic class"
+
+      # Product dimensions
+      - name: product_category
+        verbose_name: "Category"
+        is_dimension: true
+        is_time: false
+        description: "Beverages, Snacks, Tobacco, etc."
+
+      - name: brand_name
+        verbose_name: "Brand"
+        is_dimension: true
+        is_time: false
+
+      - name: sku
+        verbose_name: "SKU"
+        is_dimension: true
+        is_time: false
+        description: "Full product description"
+
+      - name: is_tbwa_client
+        verbose_name: "Is TBWA Client"
+        is_dimension: true
+        is_time: false
+
+      - name: brand_type
+        verbose_name: "Brand Type"
+        is_dimension: true
+        is_time: false
+        description: "TBWA Client or Competitor"
+
+      # Customer dimensions
+      - name: gender
+        verbose_name: "Gender"
+        is_dimension: true
+        is_time: false
+        description: "male, female, unknown"
+
+      - name: age_bracket
+        verbose_name: "Age Bracket"
+        is_dimension: true
+        is_time: false
+        description: "18-24, 25-34, 35-44, 45-54, 55+"
+
+      - name: customer_type
+        verbose_name: "Customer Type"
+        is_dimension: true
+        is_time: false
+        description: "regular, occasional, new, unknown"
+
+      - name: income_segment
+        verbose_name: "Income Segment"
+        is_dimension: true
+        is_time: false
+        description: "High, Middle, Low"
+
+      # Behavior dimensions
+      - name: request_mode
+        verbose_name: "Request Mode"
+        is_dimension: true
+        is_time: false
+        description: "verbal, pointing, indirect"
+
+      - name: request_type
+        verbose_name: "Request Type"
+        is_dimension: true
+        is_time: false
+        description: "branded, unbranded, point, indirect"
+
+      - name: suggestion_accepted
+        verbose_name: "Suggestion Accepted"
+        is_dimension: true
+        is_time: false
+
+      - name: payment_method
+        verbose_name: "Payment Method"
+        is_dimension: true
+        is_time: false
+        description: "cash, gcash, maya, credit, other"
+
+      - name: campaign_influenced
+        verbose_name: "Campaign Influenced"
+        is_dimension: true
+        is_time: false
+
+      - name: substitution_occurred
+        verbose_name: "Substitution Occurred"
+        is_dimension: true
+        is_time: false
+
+      - name: is_multi_item_basket
+        verbose_name: "Multi-Item Basket"
+        is_dimension: true
+        is_time: false
+
+      - name: is_repeat_customer
+        verbose_name: "Repeat Customer"
+        is_dimension: true
+        is_time: false
+
+      - name: is_digital_payment
+        verbose_name: "Digital Payment"
+        is_dimension: true
+        is_time: false
+
+  # ===========================================
+  # Daily Summary Dataset
+  # ===========================================
+  - dataset_id: bi_transaction_summary_daily
+    table: bi_transaction_summary_daily
+    schema: public
+    description: "Daily aggregated transaction summary by region, store type, and category"
+
+    metrics:
+      - name: sum_transactions
+        label: "Total Transactions"
+        sql_expression: "SUM(transaction_count)"
+        type: "sum"
+
+      - name: sum_revenue
+        label: "Total Revenue"
+        sql_expression: "SUM(total_revenue)"
+        type: "sum"
+
+      - name: sum_units
+        label: "Total Units"
+        sql_expression: "SUM(total_units)"
+        type: "sum"
+
+      - name: avg_revenue_per_store
+        label: "Avg Revenue/Store"
+        sql_expression: "SUM(total_revenue) / NULLIF(SUM(active_stores), 0)"
+        type: "ratio"
+
+    columns:
+      - name: transaction_date
+        verbose_name: "Date"
+        is_dimension: false
+        is_time: true
+
+      - name: region
+        verbose_name: "Region"
+        is_dimension: true
+        is_time: false
+
+      - name: store_type
+        verbose_name: "Store Type"
+        is_dimension: true
+        is_time: false
+
+      - name: product_category
+        verbose_name: "Category"
+        is_dimension: true
+        is_time: false
+
+  # ===========================================
+  # Product Performance Dataset
+  # ===========================================
+  - dataset_id: bi_product_performance
+    table: bi_product_performance
+    schema: public
+    description: "Product and SKU performance metrics"
+
+    metrics:
+      - name: sum_revenue
+        label: "Total Revenue"
+        sql_expression: "SUM(total_revenue)"
+        type: "sum"
+
+      - name: sum_units
+        label: "Total Units"
+        sql_expression: "SUM(total_units_sold)"
+        type: "sum"
+
+      - name: sum_transactions
+        label: "Total Transactions"
+        sql_expression: "SUM(transaction_count)"
+        type: "sum"
+
+      - name: avg_suggestion_rate
+        label: "Avg Suggestion Accept"
+        sql_expression: "AVG(suggestion_acceptance_rate)"
+        type: "avg"
+
+    columns:
+      - name: brand_name
+        verbose_name: "Brand"
+        is_dimension: true
+        is_time: false
+
+      - name: product_category
+        verbose_name: "Category"
+        is_dimension: true
+        is_time: false
+
+      - name: sku
+        verbose_name: "SKU"
+        is_dimension: true
+        is_time: false
+
+      - name: brand_type
+        verbose_name: "Brand Type"
+        is_dimension: true
+        is_time: false
+
+      - name: is_tbwa_client
+        verbose_name: "Is TBWA Client"
+        is_dimension: true
+        is_time: false
+
+  # ===========================================
+  # Customer Segments Dataset
+  # ===========================================
+  - dataset_id: bi_customer_segments
+    table: bi_customer_segments
+    schema: public
+    description: "Customer segment analysis by demographics"
+
+    metrics:
+      - name: sum_transactions
+        label: "Total Transactions"
+        sql_expression: "SUM(transaction_count)"
+        type: "sum"
+
+      - name: sum_spend
+        label: "Total Spend"
+        sql_expression: "SUM(total_spend)"
+        type: "sum"
+
+      - name: avg_spend
+        label: "Avg Spend"
+        sql_expression: "AVG(avg_transaction_value)"
+        type: "avg"
+
+    columns:
+      - name: gender
+        verbose_name: "Gender"
+        is_dimension: true
+        is_time: false
+
+      - name: age_bracket
+        verbose_name: "Age Bracket"
+        is_dimension: true
+        is_time: false
+
+      - name: economic_class
+        verbose_name: "Economic Class"
+        is_dimension: true
+        is_time: false
+
+      - name: income_segment
+        verbose_name: "Income Segment"
+        is_dimension: true
+        is_time: false
+
+      - name: customer_type
+        verbose_name: "Customer Type"
+        is_dimension: true
+        is_time: false
+
+  # ===========================================
+  # Store Performance Dataset
+  # ===========================================
+  - dataset_id: bi_store_performance
+    table: bi_store_performance
+    schema: public
+    description: "Store-level performance metrics"
+
+    metrics:
+      - name: sum_revenue
+        label: "Total Revenue"
+        sql_expression: "SUM(total_revenue)"
+        type: "sum"
+
+      - name: sum_transactions
+        label: "Total Transactions"
+        sql_expression: "SUM(transaction_count)"
+        type: "sum"
+
+      - name: store_count
+        label: "Store Count"
+        sql_expression: "COUNT(DISTINCT store_id)"
+        type: "count_distinct"
+
+      - name: avg_daily_revenue
+        label: "Avg Daily Revenue"
+        sql_expression: "AVG(avg_daily_revenue)"
+        type: "avg"
+
+    columns:
+      - name: store_id
+        verbose_name: "Store ID"
+        is_dimension: true
+        is_time: false
+
+      - name: store_type
+        verbose_name: "Store Type"
+        is_dimension: true
+        is_time: false
+
+      - name: store_category
+        verbose_name: "Store Category"
+        is_dimension: true
+        is_time: false
+
+      - name: region
+        verbose_name: "Region"
+        is_dimension: true
+        is_time: false
+
+      - name: province
+        verbose_name: "Province"
+        is_dimension: true
+        is_time: false
+
+      - name: city
+        verbose_name: "City"
+        is_dimension: true
+        is_time: false
+
+      - name: economic_class
+        verbose_name: "Economic Class"
+        is_dimension: true
+        is_time: false
+
+  # ===========================================
+  # Competitive Analysis Dataset
+  # ===========================================
+  - dataset_id: bi_competitive_analysis
+    table: bi_competitive_analysis
+    schema: public
+    description: "Brand competitive analysis and market share"
+
+    metrics:
+      - name: sum_revenue
+        label: "Total Revenue"
+        sql_expression: "SUM(total_revenue)"
+        type: "sum"
+
+      - name: sum_transactions
+        label: "Total Transactions"
+        sql_expression: "SUM(transaction_count)"
+        type: "sum"
+
+      - name: sum_units
+        label: "Total Units"
+        sql_expression: "SUM(total_units)"
+        type: "sum"
+
+      - name: net_substitution
+        label: "Net Substitution Flow"
+        sql_expression: "SUM(net_substitution_flow)"
+        type: "sum"
+
+    columns:
+      - name: brand_name
+        verbose_name: "Brand"
+        is_dimension: true
+        is_time: false
+
+      - name: product_category
+        verbose_name: "Category"
+        is_dimension: true
+        is_time: false
+
+      - name: brand_type
+        verbose_name: "Brand Type"
+        is_dimension: true
+        is_time: false
+
+      - name: is_tbwa_client
+        verbose_name: "Is TBWA Client"
+        is_dimension: true
+        is_time: false
+
+  # ===========================================
+  # Hourly Patterns Dataset
+  # ===========================================
+  - dataset_id: bi_hourly_patterns
+    table: bi_hourly_patterns
+    schema: public
+    description: "Hourly transaction patterns analysis"
+
+    metrics:
+      - name: sum_transactions
+        label: "Total Transactions"
+        sql_expression: "SUM(transaction_count)"
+        type: "sum"
+
+      - name: sum_revenue
+        label: "Total Revenue"
+        sql_expression: "SUM(total_revenue)"
+        type: "sum"
+
+    columns:
+      - name: time_of_day
+        verbose_name: "Time of Day"
+        is_dimension: true
+        is_time: false
+
+      - name: hour_of_day
+        verbose_name: "Hour"
+        is_dimension: true
+        is_time: false
+
+      - name: day_name
+        verbose_name: "Day"
+        is_dimension: true
+        is_time: false
+
+      - name: day_type
+        verbose_name: "Day Type"
+        is_dimension: true
+        is_time: false
+
+  # ===========================================
+  # Basket Analysis Dataset
+  # ===========================================
+  - dataset_id: bi_basket_analysis
+    table: bi_basket_analysis
+    schema: public
+    description: "Multi-item basket analysis"
+
+    metrics:
+      - name: sum_transactions
+        label: "Total Transactions"
+        sql_expression: "SUM(transaction_count)"
+        type: "sum"
+
+      - name: sum_revenue
+        label: "Total Revenue"
+        sql_expression: "SUM(total_revenue)"
+        type: "sum"
+
+    columns:
+      - name: basket_size
+        verbose_name: "Basket Size"
+        is_dimension: true
+        is_time: false
+
+      - name: basket_category
+        verbose_name: "Basket Category"
+        is_dimension: true
+        is_time: false
