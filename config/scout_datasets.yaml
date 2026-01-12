@@ -1,0 +1,581 @@
+# Scout Dashboard Superset Dataset Configuration
+#
+# This file defines the datasets, metrics, and columns for the Scout Dashboard.
+# Use this as a reference when registering datasets in Superset.
+#
+# Version: 1.0
+# Generated: 2026-01-12
+
+datasets:
+  # ===========================================
+  # Main Fact Dataset - Campaign Performance
+  # ===========================================
+  - dataset_id: bi_fact_campaign_performance
+    table: bi_fact_campaign_performance
+    schema: public
+    description: "Core Scout dataset combining campaign performance metrics with spend data and all dimension attributes"
+
+    metrics:
+      - name: total_impressions
+        label: "Total Impressions"
+        sql_expression: "SUM(impressions)"
+        type: "sum"
+        description: "Total number of ad impressions served"
+
+      - name: total_clicks
+        label: "Total Clicks"
+        sql_expression: "SUM(clicks)"
+        type: "sum"
+        description: "Total number of clicks on ads"
+
+      - name: total_reach
+        label: "Total Reach"
+        sql_expression: "SUM(reach)"
+        type: "sum"
+        description: "Total unique users reached"
+
+      - name: total_engagements
+        label: "Total Engagements"
+        sql_expression: "SUM(engagements)"
+        type: "sum"
+        description: "Total engagement actions (likes, shares, comments)"
+
+      - name: total_conversions
+        label: "Total Conversions"
+        sql_expression: "SUM(conversions)"
+        type: "sum"
+        description: "Total conversion events"
+
+      - name: total_video_views
+        label: "Total Video Views"
+        sql_expression: "SUM(video_views)"
+        type: "sum"
+        description: "Total video view starts"
+
+      - name: total_video_completions
+        label: "Total Video Completions"
+        sql_expression: "SUM(video_completions)"
+        type: "sum"
+        description: "Total videos watched to completion"
+
+      - name: total_gross_spend
+        label: "Gross Spend"
+        sql_expression: "SUM(gross_spend)"
+        type: "sum"
+        description: "Total gross media spend"
+
+      - name: total_net_spend
+        label: "Net Spend"
+        sql_expression: "SUM(net_spend)"
+        type: "sum"
+        description: "Total net media spend (after discounts)"
+
+      - name: avg_ctr
+        label: "CTR (%)"
+        sql_expression: "CASE WHEN SUM(impressions) > 0 THEN ROUND((SUM(clicks)::NUMERIC / SUM(impressions)) * 100, 4) ELSE 0 END"
+        type: "ratio"
+        description: "Click-through rate percentage"
+
+      - name: avg_cpc
+        label: "CPC ($)"
+        sql_expression: "CASE WHEN SUM(clicks) > 0 THEN ROUND(SUM(net_spend)::NUMERIC / SUM(clicks), 2) ELSE 0 END"
+        type: "ratio"
+        description: "Cost per click"
+
+      - name: avg_cpm
+        label: "CPM ($)"
+        sql_expression: "CASE WHEN SUM(impressions) > 0 THEN ROUND((SUM(net_spend)::NUMERIC / SUM(impressions)) * 1000, 2) ELSE 0 END"
+        type: "ratio"
+        description: "Cost per thousand impressions"
+
+      - name: avg_cpa
+        label: "CPA ($)"
+        sql_expression: "CASE WHEN SUM(conversions) > 0 THEN ROUND(SUM(net_spend)::NUMERIC / SUM(conversions), 2) ELSE 0 END"
+        type: "ratio"
+        description: "Cost per acquisition/conversion"
+
+      - name: avg_vcr
+        label: "VCR (%)"
+        sql_expression: "CASE WHEN SUM(video_views) > 0 THEN ROUND((SUM(video_completions)::NUMERIC / SUM(video_views)) * 100, 2) ELSE 0 END"
+        type: "ratio"
+        description: "Video completion rate percentage"
+
+      - name: campaign_count
+        label: "Campaign Count"
+        sql_expression: "COUNT(DISTINCT campaign_id)"
+        type: "count_distinct"
+        description: "Number of unique campaigns"
+
+      - name: active_days
+        label: "Active Days"
+        sql_expression: "COUNT(DISTINCT performance_date)"
+        type: "count_distinct"
+        description: "Number of days with activity"
+
+    columns:
+      # Time columns
+      - name: performance_date
+        verbose_name: "Date"
+        is_dimension: false
+        is_time: true
+
+      - name: year
+        verbose_name: "Year"
+        is_dimension: true
+        is_time: false
+
+      - name: quarter
+        verbose_name: "Quarter"
+        is_dimension: true
+        is_time: false
+
+      - name: month
+        verbose_name: "Month"
+        is_dimension: true
+        is_time: false
+
+      - name: month_name
+        verbose_name: "Month Name"
+        is_dimension: true
+        is_time: false
+
+      - name: week
+        verbose_name: "Week"
+        is_dimension: true
+        is_time: false
+
+      - name: fiscal_year
+        verbose_name: "Fiscal Year"
+        is_dimension: true
+        is_time: false
+
+      - name: fiscal_quarter
+        verbose_name: "Fiscal Quarter"
+        is_dimension: true
+        is_time: false
+
+      - name: year_quarter
+        verbose_name: "Year-Quarter"
+        is_dimension: true
+        is_time: false
+
+      - name: year_month
+        verbose_name: "Year-Month"
+        is_dimension: true
+        is_time: false
+
+      # Campaign dimensions
+      - name: campaign_id
+        verbose_name: "Campaign ID"
+        is_dimension: true
+        is_time: false
+
+      - name: campaign_name
+        verbose_name: "Campaign"
+        is_dimension: true
+        is_time: false
+
+      - name: campaign_code
+        verbose_name: "Campaign Code"
+        is_dimension: true
+        is_time: false
+
+      - name: campaign_type
+        verbose_name: "Campaign Type"
+        is_dimension: true
+        is_time: false
+
+      - name: campaign_objective
+        verbose_name: "Objective"
+        is_dimension: true
+        is_time: false
+
+      - name: campaign_status
+        verbose_name: "Status"
+        is_dimension: true
+        is_time: false
+
+      - name: campaign_status_display
+        verbose_name: "Status (Display)"
+        is_dimension: true
+        is_time: false
+
+      # Brand dimensions
+      - name: brand_id
+        verbose_name: "Brand ID"
+        is_dimension: true
+        is_time: false
+
+      - name: brand_name
+        verbose_name: "Brand"
+        is_dimension: true
+        is_time: false
+
+      - name: brand_code
+        verbose_name: "Brand Code"
+        is_dimension: true
+        is_time: false
+
+      - name: brand_category
+        verbose_name: "Brand Category"
+        is_dimension: true
+        is_time: false
+
+      # Client dimensions
+      - name: client_id
+        verbose_name: "Client ID"
+        is_dimension: true
+        is_time: false
+
+      - name: client_name
+        verbose_name: "Client"
+        is_dimension: true
+        is_time: false
+
+      - name: client_code
+        verbose_name: "Client Code"
+        is_dimension: true
+        is_time: false
+
+      - name: client_industry
+        verbose_name: "Industry"
+        is_dimension: true
+        is_time: false
+
+      # Channel dimensions
+      - name: channel_id
+        verbose_name: "Channel ID"
+        is_dimension: true
+        is_time: false
+
+      - name: channel_name
+        verbose_name: "Channel"
+        is_dimension: true
+        is_time: false
+
+      - name: channel_type
+        verbose_name: "Channel Type"
+        is_dimension: true
+        is_time: false
+
+      - name: sub_channel
+        verbose_name: "Sub-Channel"
+        is_dimension: true
+        is_time: false
+
+      - name: platform
+        verbose_name: "Platform"
+        is_dimension: true
+        is_time: false
+
+      - name: is_digital
+        verbose_name: "Is Digital"
+        is_dimension: true
+        is_time: false
+
+      - name: channel_category
+        verbose_name: "Channel Category"
+        is_dimension: true
+        is_time: false
+
+      # Market dimensions
+      - name: market_id
+        verbose_name: "Market ID"
+        is_dimension: true
+        is_time: false
+
+      - name: market_name
+        verbose_name: "Market"
+        is_dimension: true
+        is_time: false
+
+      - name: market_code
+        verbose_name: "Market Code"
+        is_dimension: true
+        is_time: false
+
+      - name: market_region
+        verbose_name: "Region"
+        is_dimension: true
+        is_time: false
+
+      - name: country
+        verbose_name: "Country"
+        is_dimension: true
+        is_time: false
+
+      - name: market_currency
+        verbose_name: "Currency"
+        is_dimension: true
+        is_time: false
+
+  # ===========================================
+  # Campaign Summary Dataset
+  # ===========================================
+  - dataset_id: bi_campaign_summary
+    table: bi_campaign_summary
+    schema: public
+    description: "Pre-aggregated campaign-level summary with computed totals and rates"
+
+    metrics:
+      - name: sum_total_impressions
+        label: "Total Impressions"
+        sql_expression: "SUM(total_impressions)"
+        type: "sum"
+
+      - name: sum_total_clicks
+        label: "Total Clicks"
+        sql_expression: "SUM(total_clicks)"
+        type: "sum"
+
+      - name: sum_total_reach
+        label: "Total Reach"
+        sql_expression: "SUM(total_reach)"
+        type: "sum"
+
+      - name: sum_total_conversions
+        label: "Total Conversions"
+        sql_expression: "SUM(total_conversions)"
+        type: "sum"
+
+      - name: sum_net_spend
+        label: "Net Spend"
+        sql_expression: "SUM(total_net_spend)"
+        type: "sum"
+
+      - name: sum_gross_spend
+        label: "Gross Spend"
+        sql_expression: "SUM(total_gross_spend)"
+        type: "sum"
+
+      - name: sum_budget
+        label: "Total Budget"
+        sql_expression: "SUM(campaign_budget)"
+        type: "sum"
+
+      - name: avg_budget_utilization
+        label: "Avg Budget Utilization (%)"
+        sql_expression: "AVG(budget_utilization_pct)"
+        type: "avg"
+
+      - name: count_campaigns
+        label: "Campaign Count"
+        sql_expression: "COUNT(DISTINCT campaign_id)"
+        type: "count_distinct"
+
+      - name: count_brands
+        label: "Brand Count"
+        sql_expression: "COUNT(DISTINCT brand_id)"
+        type: "count_distinct"
+
+      - name: count_clients
+        label: "Client Count"
+        sql_expression: "COUNT(DISTINCT client_id)"
+        type: "count_distinct"
+
+    columns:
+      - name: campaign_id
+        verbose_name: "Campaign ID"
+        is_dimension: true
+        is_time: false
+
+      - name: campaign_name
+        verbose_name: "Campaign"
+        is_dimension: true
+        is_time: false
+
+      - name: campaign_type
+        verbose_name: "Campaign Type"
+        is_dimension: true
+        is_time: false
+
+      - name: campaign_objective
+        verbose_name: "Objective"
+        is_dimension: true
+        is_time: false
+
+      - name: campaign_status_display
+        verbose_name: "Status"
+        is_dimension: true
+        is_time: false
+
+      - name: campaign_start_date
+        verbose_name: "Start Date"
+        is_dimension: false
+        is_time: true
+
+      - name: campaign_end_date
+        verbose_name: "End Date"
+        is_dimension: false
+        is_time: true
+
+      - name: brand_name
+        verbose_name: "Brand"
+        is_dimension: true
+        is_time: false
+
+      - name: brand_category
+        verbose_name: "Category"
+        is_dimension: true
+        is_time: false
+
+      - name: client_name
+        verbose_name: "Client"
+        is_dimension: true
+        is_time: false
+
+      - name: client_industry
+        verbose_name: "Industry"
+        is_dimension: true
+        is_time: false
+
+  # ===========================================
+  # Dimension Datasets (for lookups/filters)
+  # ===========================================
+  - dataset_id: dim_client
+    table: dim_client
+    schema: public
+    description: "Client master data dimension"
+
+    metrics:
+      - name: client_count
+        label: "Client Count"
+        sql_expression: "COUNT(DISTINCT client_id)"
+        type: "count_distinct"
+
+    columns:
+      - name: client_id
+        verbose_name: "Client ID"
+        is_dimension: true
+        is_time: false
+
+      - name: client_name
+        verbose_name: "Client"
+        is_dimension: true
+        is_time: false
+
+      - name: industry
+        verbose_name: "Industry"
+        is_dimension: true
+        is_time: false
+
+      - name: client_region
+        verbose_name: "Region"
+        is_dimension: true
+        is_time: false
+
+      - name: client_tier
+        verbose_name: "Tier"
+        is_dimension: true
+        is_time: false
+
+      - name: years_as_client
+        verbose_name: "Years as Client"
+        is_dimension: true
+        is_time: false
+
+  - dataset_id: dim_brand
+    table: dim_brand
+    schema: public
+    description: "Brand master data dimension"
+
+    metrics:
+      - name: brand_count
+        label: "Brand Count"
+        sql_expression: "COUNT(DISTINCT brand_id)"
+        type: "count_distinct"
+
+    columns:
+      - name: brand_id
+        verbose_name: "Brand ID"
+        is_dimension: true
+        is_time: false
+
+      - name: brand_name
+        verbose_name: "Brand"
+        is_dimension: true
+        is_time: false
+
+      - name: brand_category
+        verbose_name: "Category"
+        is_dimension: true
+        is_time: false
+
+      - name: brand_sub_category
+        verbose_name: "Sub-Category"
+        is_dimension: true
+        is_time: false
+
+      - name: client_name
+        verbose_name: "Client"
+        is_dimension: true
+        is_time: false
+
+  - dataset_id: dim_channel
+    table: dim_channel
+    schema: public
+    description: "Media channel dimension"
+
+    metrics:
+      - name: channel_count
+        label: "Channel Count"
+        sql_expression: "COUNT(DISTINCT channel_id)"
+        type: "count_distinct"
+
+    columns:
+      - name: channel_id
+        verbose_name: "Channel ID"
+        is_dimension: true
+        is_time: false
+
+      - name: channel_name
+        verbose_name: "Channel"
+        is_dimension: true
+        is_time: false
+
+      - name: channel_type
+        verbose_name: "Type"
+        is_dimension: true
+        is_time: false
+
+      - name: platform
+        verbose_name: "Platform"
+        is_dimension: true
+        is_time: false
+
+      - name: channel_category
+        verbose_name: "Category"
+        is_dimension: true
+        is_time: false
+
+  - dataset_id: dim_market
+    table: dim_market
+    schema: public
+    description: "Geographic market dimension"
+
+    metrics:
+      - name: market_count
+        label: "Market Count"
+        sql_expression: "COUNT(DISTINCT market_id)"
+        type: "count_distinct"
+
+    columns:
+      - name: market_id
+        verbose_name: "Market ID"
+        is_dimension: true
+        is_time: false
+
+      - name: market_name
+        verbose_name: "Market"
+        is_dimension: true
+        is_time: false
+
+      - name: market_region
+        verbose_name: "Region"
+        is_dimension: true
+        is_time: false
+
+      - name: country
+        verbose_name: "Country"
+        is_dimension: true
+        is_time: false

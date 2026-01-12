@@ -1,0 +1,179 @@
+{
+  "dashboard_title": "Scout - Agency Performance Overview",
+  "description": "Executive dashboard providing a comprehensive view of TBWA agency campaign performance, media spend, and key marketing KPIs across clients, brands, channels, and markets.",
+  "css": ".scout-kpi-row { margin-bottom: 16px; } .scout-header { font-weight: 600; color: #1a1a2e; }",
+  "slug": "scout-agency-overview",
+  "published": true,
+  "position_json": "{\"DASHBOARD_VERSION_KEY\":\"v2\",\"DASHBOARD_ROOT_ID\":{\"type\":\"ROOT\",\"id\":\"ROOT_ID\",\"children\":[\"GRID_ID\"]},\"GRID_ID\":{\"type\":\"GRID\",\"id\":\"GRID_ID\",\"children\":[\"ROW-header\",\"ROW-kpi-primary\",\"ROW-kpi-secondary\",\"ROW-trends\",\"ROW-channel-spend\",\"ROW-breakdown\",\"ROW-comparison\",\"ROW-client-analysis\",\"ROW-campaign-table\",\"ROW-video\"],\"parents\":[\"ROOT_ID\"]},\"ROW-header\":{\"type\":\"ROW\",\"id\":\"ROW-header\",\"children\":[\"HEADER-scout\"],\"meta\":{\"background\":\"BACKGROUND_TRANSPARENT\"},\"parents\":[\"ROOT_ID\",\"GRID_ID\"]},\"HEADER-scout\":{\"type\":\"HEADER\",\"id\":\"HEADER-scout\",\"meta\":{\"text\":\"Scout - Agency Performance Overview\"},\"parents\":[\"ROOT_ID\",\"GRID_ID\",\"ROW-header\"]},\"ROW-kpi-primary\":{\"type\":\"ROW\",\"id\":\"ROW-kpi-primary\",\"children\":[],\"meta\":{\"background\":\"BACKGROUND_TRANSPARENT\"},\"parents\":[\"ROOT_ID\",\"GRID_ID\"]},\"ROW-kpi-secondary\":{\"type\":\"ROW\",\"id\":\"ROW-kpi-secondary\",\"children\":[],\"meta\":{\"background\":\"BACKGROUND_TRANSPARENT\"},\"parents\":[\"ROOT_ID\",\"GRID_ID\"]},\"ROW-trends\":{\"type\":\"ROW\",\"id\":\"ROW-trends\",\"children\":[],\"meta\":{\"background\":\"BACKGROUND_TRANSPARENT\"},\"parents\":[\"ROOT_ID\",\"GRID_ID\"]},\"ROW-channel-spend\":{\"type\":\"ROW\",\"id\":\"ROW-channel-spend\",\"children\":[],\"meta\":{\"background\":\"BACKGROUND_TRANSPARENT\"},\"parents\":[\"ROOT_ID\",\"GRID_ID\"]},\"ROW-breakdown\":{\"type\":\"ROW\",\"id\":\"ROW-breakdown\",\"children\":[],\"meta\":{\"background\":\"BACKGROUND_TRANSPARENT\"},\"parents\":[\"ROOT_ID\",\"GRID_ID\"]},\"ROW-comparison\":{\"type\":\"ROW\",\"id\":\"ROW-comparison\",\"children\":[],\"meta\":{\"background\":\"BACKGROUND_TRANSPARENT\"},\"parents\":[\"ROOT_ID\",\"GRID_ID\"]},\"ROW-client-analysis\":{\"type\":\"ROW\",\"id\":\"ROW-client-analysis\",\"children\":[],\"meta\":{\"background\":\"BACKGROUND_TRANSPARENT\"},\"parents\":[\"ROOT_ID\",\"GRID_ID\"]},\"ROW-campaign-table\":{\"type\":\"ROW\",\"id\":\"ROW-campaign-table\",\"children\":[],\"meta\":{\"background\":\"BACKGROUND_TRANSPARENT\"},\"parents\":[\"ROOT_ID\",\"GRID_ID\"]},\"ROW-video\":{\"type\":\"ROW\",\"id\":\"ROW-video\",\"children\":[],\"meta\":{\"background\":\"BACKGROUND_TRANSPARENT\"},\"parents\":[\"ROOT_ID\",\"GRID_ID\"]}}",
+  "metadata": {
+    "native_filter_configuration": [
+      {
+        "id": "filter_client",
+        "name": "Client",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "client_name"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": [],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "defaultToFirstItem": false,
+          "multiSelect": true,
+          "searchAllOptions": true,
+          "sortAscending": true
+        }
+      },
+      {
+        "id": "filter_brand",
+        "name": "Brand",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "brand_name"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": ["filter_client"],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "defaultToFirstItem": false,
+          "multiSelect": true,
+          "searchAllOptions": true,
+          "sortAscending": true
+        }
+      },
+      {
+        "id": "filter_campaign",
+        "name": "Campaign",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "campaign_name"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": ["filter_brand"],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "defaultToFirstItem": false,
+          "multiSelect": true,
+          "searchAllOptions": true,
+          "sortAscending": true
+        }
+      },
+      {
+        "id": "filter_channel",
+        "name": "Channel",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "channel_name"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": [],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "defaultToFirstItem": false,
+          "multiSelect": true,
+          "searchAllOptions": true,
+          "sortAscending": true
+        }
+      },
+      {
+        "id": "filter_channel_type",
+        "name": "Channel Type",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "channel_type"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": [],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "defaultToFirstItem": false,
+          "multiSelect": true,
+          "sortAscending": true
+        }
+      },
+      {
+        "id": "filter_market",
+        "name": "Market",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "market_name"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": [],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "defaultToFirstItem": false,
+          "multiSelect": true,
+          "searchAllOptions": true,
+          "sortAscending": true
+        }
+      },
+      {
+        "id": "filter_region",
+        "name": "Region",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "market_region"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": [],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "defaultToFirstItem": false,
+          "multiSelect": true,
+          "sortAscending": true
+        }
+      },
+      {
+        "id": "filter_campaign_status",
+        "name": "Campaign Status",
+        "filterType": "filter_select",
+        "targets": [{"datasetId": null, "column": {"name": "campaign_status_display"}}],
+        "defaultDataMask": {"filterState": {"value": null}},
+        "cascadeParentIds": [],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {
+          "enableEmptyFilter": false,
+          "defaultToFirstItem": false,
+          "multiSelect": true,
+          "sortAscending": true
+        }
+      },
+      {
+        "id": "filter_date_range",
+        "name": "Date Range",
+        "filterType": "filter_time",
+        "targets": [{"datasetId": null, "column": {"name": "performance_date"}}],
+        "defaultDataMask": {"filterState": {"value": "Last quarter"}},
+        "cascadeParentIds": [],
+        "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
+        "controlValues": {}
+      }
+    ],
+    "chart_configuration": {
+      "kpi_total_spend": {
+        "id": "kpi_total_spend",
+        "crossFilters": {"chartsInScope": [], "chartsOutOfScope": []}
+      },
+      "kpi_total_impressions": {
+        "id": "kpi_total_impressions",
+        "crossFilters": {"chartsInScope": [], "chartsOutOfScope": []}
+      },
+      "kpi_total_reach": {
+        "id": "kpi_total_reach",
+        "crossFilters": {"chartsInScope": [], "chartsOutOfScope": []}
+      },
+      "kpi_avg_ctr": {
+        "id": "kpi_avg_ctr",
+        "crossFilters": {"chartsInScope": [], "chartsOutOfScope": []}
+      }
+    },
+    "filter_scopes": {},
+    "expanded_slices": {},
+    "refresh_frequency": 300,
+    "default_filters": "{}",
+    "color_scheme": "supersetColors",
+    "label_colors": {},
+    "shared_label_colors": {},
+    "timed_refresh_immune_slices": [],
+    "color_scheme_domain": [],
+    "cross_filters_enabled": true
+  },
+  "slices": [],
+  "certification_details": null,
+  "certified_by": null,
+  "is_managed_externally": false
+}
