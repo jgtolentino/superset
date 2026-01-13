@@ -1,0 +1,228 @@
+// Multi-Tenant Provider Model Schema
+// ===================================
+//
+// This schema implements a flexible multi-tenant model where:
+//   - Tenant = organization using the platform
+//   - Provider = organization offering services/agents to other tenants
+//   - The same org can be BOTH tenant and provider
+//
+// To visualize: Paste into https://dbdiagram.io/d
+//
+// Author: InsightPulse AI
+// Date: 2026-01-13
+
+////////////////////////////////////////////////////////////
+// ENUMS
+////////////////////////////////////////////////////////////
+
+Enum account_role_type {
+  TENANT
+  PROVIDER
+  INTERNAL
+}
+
+Enum subscription_status {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+Enum environment_type {
+  DEV
+  STAGING
+  PROD
+}
+
+Enum account_link_type {
+  PROVIDER_OF     // from_account is provider for to_account
+  RESELLER_OF     // from_account resells to_account
+  PARTNER_OF      // symmetric partner relationship
+}
+
+////////////////////////////////////////////////////////////
+// CORE ENTITIES
+////////////////////////////////////////////////////////////
+
+Table accounts {
+  id               uuid [pk, default: `gen_random_uuid()`]
+  slug             text [not null, unique, note: 'human-readable handle']
+  name             text [not null]
+  legal_name       text
+  country          text
+  timezone         text [default: 'UTC']
+  is_active        bool [not null, default: true]
+
+  // Multi-tenancy hints
+  default_locale   text [default: 'en']
+  billing_email    text
+  created_at       timestamptz [not null, default: `now()`]
+  updated_at       timestamptz [not null, default: `now()`]
+
+  Note: 'accounts represent both tenants and providers. Roles live in account_roles.'
+}
+
+Table account_roles {
+  id               uuid [pk, default: `gen_random_uuid()`]
+  account_id       uuid [not null, ref: > accounts.id]
+  role             account_role_type [not null]
+  is_primary       bool [not null, default: false]
+  created_at       timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (account_id, role) [unique]
+  }
+}
+
+Table users {
+  id               uuid [pk, default: `gen_random_uuid()`]
+  account_id       uuid [not null, ref: > accounts.id]
+  email            text [not null, unique]
+  full_name        text
+  is_admin         bool [not null, default: false]
+  is_active        bool [not null, default: true]
+  created_at       timestamptz [not null, default: `now()`]
+  updated_at       timestamptz [not null, default: `now()`]
+
+  // Optional external IDs (Supabase auth, Odoo res.users, etc.)
+  auth_user_id     uuid [note: 'Supabase auth.users.id']
+  odoo_user_id     int [note: 'res_users.id mapping']
+  superset_user_id int [note: 'Superset ab_user.id']
+}
+
+////////////////////////////////////////////////////////////
+// PROVIDER SIDE: SERVICES & PLANS
+////////////////////////////////////////////////////////////
+
+Table services {
+  id                        uuid [pk, default: `gen_random_uuid()`]
+  provider_account_id       uuid [not null, ref: > accounts.id]
+  key                       text [not null, unique, note: 'e.g., "scout-dashboard", "ask-copilot"']
+  name                      text [not null]
+  description               text
+  is_public                 bool [not null, default: false]
+  created_at                timestamptz [not null, default: `now()`]
+  updated_at                timestamptz [not null, default: `now()`]
+
+  // Optional technical hints
+  category                  text [note: '"AI_AGENT", "DASHBOARD", "ERP_INTEGRATION"']
+  default_environment_type  environment_type
+}
+
+Table service_plans {
+  id                 uuid [pk, default: `gen_random_uuid()`]
+  service_id         uuid [not null, ref: > services.id]
+  key                text [not null, note: '"free", "pro", "enterprise"']
+  name               text [not null]
+  description        text
+  monthly_price_cents int [note: '0 for free']
+  max_seats          int
+  features           jsonb [default: '{}', note: 'Feature flags']
+  created_at         timestamptz [not null, default: `now()`]
+  updated_at         timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (service_id, key) [unique]
+  }
+}
+
+////////////////////////////////////////////////////////////
+// TENANT SIDE: SUBSCRIPTIONS & RELATIONSHIPS
+////////////////////////////////////////////////////////////
+
+Table subscriptions {
+  id                    uuid [pk, default: `gen_random_uuid()`]
+  tenant_account_id     uuid [not null, ref: > accounts.id]
+  provider_account_id   uuid [not null, ref: > accounts.id]
+  service_id            uuid [not null, ref: > services.id]
+  service_plan_id       uuid [ref: > service_plans.id]
+  status                subscription_status [not null, default: 'DRAFT']
+  started_at            timestamptz
+  ended_at              timestamptz
+  trial_ends_at         timestamptz
+  created_at            timestamptz [not null, default: `now()`]
+  updated_at            timestamptz [not null, default: `now()`]
+
+  // optional billing / external references
+  external_ref          text [note: 'Stripe/Invoice id etc.']
+
+  Indexes {
+    (tenant_account_id, service_id) [note: 'fast lookup']
+  }
+}
+
+Table account_links {
+  id                  uuid [pk, default: `gen_random_uuid()`]
+  from_account_id     uuid [not null, ref: > accounts.id]
+  to_account_id       uuid [not null, ref: > accounts.id]
+  link_type           account_link_type [not null]
+  created_at          timestamptz [not null, default: `now()`]
+  metadata            jsonb
+
+  Indexes {
+    (from_account_id, to_account_id, link_type) [unique]
+  }
+
+  Note: 'For PROVIDER_OF, from_account is provider, to_account is tenant.'
+}
+
+////////////////////////////////////////////////////////////
+// ENVIRONMENTS (SUPABASE / VERCEL / DO BINDINGS)
+////////////////////////////////////////////////////////////
+
+Table environments {
+  id                     uuid [pk, default: `gen_random_uuid()`]
+  account_id             uuid [not null, ref: > accounts.id]
+  env_type               environment_type [not null]
+  // infra bindings
+  supabase_project_ref   text [note: 'e.g., "cxzllzyxwpyptfretryc"']
+  vercel_project_id      text
+  digitalocean_app_id    text
+  odoo_db_name           text [note: 'if mapping per tenant / db']
+  superset_database_key  text [note: 'logical DB name in Superset']
+  connection_string      text [note: 'encrypted connection string']
+  api_key                text [note: 'encrypted API key']
+
+  created_at             timestamptz [not null, default: `now()`]
+  updated_at             timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (account_id, env_type) [unique]
+  }
+}
+
+////////////////////////////////////////////////////////////
+// EXAMPLE APP-SCOPED TABLE (ROW-BASED MULTI-TENANCY)
+////////////////////////////////////////////////////////////
+
+Table projects {
+  id                 uuid [pk, default: `gen_random_uuid()`]
+  tenant_account_id  uuid [not null, ref: > accounts.id]
+  name               text [not null]
+  key                text [not null, note: 'short code']
+  status             text [not null, default: 'active']
+  created_by_user_id uuid [not null, ref: > users.id]
+  created_at         timestamptz [not null, default: `now()`]
+  updated_at         timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (tenant_account_id, key) [unique]
+  }
+
+  Note: 'Example tenant-scoped entity. All domain tables should have tenant_account_id FK.'
+}
+
+////////////////////////////////////////////////////////////
+// RELATIONSHIP DIAGRAM
+////////////////////////////////////////////////////////////
+//
+// accounts 1--N account_roles (defines TENANT/PROVIDER/INTERNAL)
+// accounts 1--N users
+// accounts 1--N services (as providers)
+// accounts 1--N subscriptions (as tenants)
+// accounts N--N accounts via account_links
+// accounts 1--N environments
+// services 1--N service_plans
+// services 1--N subscriptions
+//
+////////////////////////////////////////////////////////////
