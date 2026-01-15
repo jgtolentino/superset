@@ -4,11 +4,21 @@ on:
   pull_request:
   push:
     branches: [ main ]
+  repository_dispatch:
+    types: [schema_changed]
 
 jobs:
   dev:
     runs-on: ubuntu-latest
     steps:
+      - name: Log schema change event (if triggered by odoo-ce)
+        if: github.event_name == 'repository_dispatch'
+        run: |
+          echo "🔄 Triggered by odoo-ce schema change"
+          echo "Changed files: ${{ github.event.client_payload.changed_files }}"
+          echo "Commit: ${{ github.event.client_payload.commit }}"
+          echo "Branch: ${{ github.event.client_payload.branch }}"
+
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
